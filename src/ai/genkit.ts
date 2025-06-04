@@ -2,7 +2,7 @@ import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
 // Validate API key exists
-const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+const apiKey = process.env.GOOGLE_GENAI_API_KEY;
 
 if (!apiKey) {
   console.error('Missing Google AI API key. Please set GOOGLE_GENAI_API_KEY or GEMINI_API_KEY environment variable.');
