@@ -10,6 +10,8 @@ if (!apiKey) {
 }
 
 export const ai = genkit({
-  plugins: [googleAI()],
+  plugins: [
+    googleAI({apiKey})
+  ],
   model: 'googleai/gemini-2.5-pro-preview-05-06',
 });
