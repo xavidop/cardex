@@ -166,9 +166,6 @@ The app uses Google's Gemini Vision API through the Genkit framework to:
 - `npm run genkit:dev` - Start Genkit AI development server
 - `npm run genkit:watch` - Start Genkit with file watching
 
-## License
-
-This project is private and proprietary.
 
 ## Support
 
