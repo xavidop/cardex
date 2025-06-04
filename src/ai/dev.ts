@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/summarize-card-information.ts';
+import '@/ai/flows/scan-pokemon-card.ts';
