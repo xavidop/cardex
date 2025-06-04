@@ -24,7 +24,7 @@ export type ScanPokemonCardInput = z.infer<typeof ScanPokemonCardInputSchema>;
 const ScanPokemonCardOutputSchema = z.object({
   cardDetails: z.object({
     name: z.string().describe("The name of the Pokemon card.").optional(),
-    set: z.string().describe("The set the Pokemon card belongs to.").optional(),
+    set: z.string().describe("The first set the Pokemon card belongs to.").optional(),
     rarity: z.string().describe("The rarity of the Pokemon card.").optional(),
   }).describe("Details about the Pokemon card.").optional(),
   error: z.string().describe("Error message if the card could not be identified.").optional()
@@ -40,14 +40,14 @@ const scanPokemonCardPrompt = ai.definePrompt({
   name: 'scanPokemonCardPrompt',
   input: {schema: ScanPokemonCardInputSchema},
   output: {schema: ScanPokemonCardOutputSchema},
-  prompt: `You are an expert Pokemon card appraiser. Use the following image to identify the card's name, set, and rarity. If you are unable to determine any of these values, leave them blank.\n
+  prompt: `You are an expert Pokemon card appraiser. Use the following image to identify the card's name, first set it was introduced in, and rarity. If you are unable to determine any of these values, leave them blank.\n
   Photo: {{media url=photoDataUri}}
   \n
   Respond using the following format:
   {
     "cardDetails": {
       "name": "Pokemon card name",
-      "set": "Pokemon card set",
+      "set": "Pokemon first card set it was introduced in",
       "rarity": "Pokemon card rarity"
     }
   }

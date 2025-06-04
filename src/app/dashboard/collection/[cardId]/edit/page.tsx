@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
 export default function EditCardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const cardId = params.cardId as string;
@@ -22,6 +22,16 @@ export default function EditCardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Don't do anything while auth is still loading
+    if (authLoading) return;
+    
+    // Redirect if no user
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+    
+    // Only fetch card if we have user and cardId
     if (user && cardId) {
       setLoading(true);
       setError(null);
@@ -40,10 +50,8 @@ export default function EditCardPage() {
           toast({ title: "Error", description: "Failed to load card details.", variant: "destructive" });
         })
         .finally(() => setLoading(false));
-    } else if (!user && !loading) { // if auth is loaded and no user
-        router.replace('/login');
     }
-  }, [user, cardId, router, toast, loading]);
+  }, [user, cardId, router, toast, authLoading]); // Removed 'loading' from dependencies
 
   const handleUpdateCard = async (data: CardFormInputs) => {
     if (!user || !card) return;
