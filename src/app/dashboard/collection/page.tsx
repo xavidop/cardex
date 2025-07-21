@@ -6,7 +6,7 @@ import { getUserCards, deleteCardFromCollection } from '@/lib/firestore';
 import type { PokemonCard } from '@/types';
 import CardItem from '@/components/cards/CardItem';
 import { Button } from '@/components/ui/button';
-import { Loader2, PlusCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, PlusCircle, AlertTriangle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -80,23 +80,37 @@ export default function CollectionPage() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h1 className="text-3xl font-bold font-headline">My Card Collection</h1>
-        <Button asChild>
-          <Link href="/dashboard/scan">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Card
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/dashboard/generate">
+              <Sparkles className="mr-2 h-5 w-5" /> Generate Card
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/scan">
+              <PlusCircle className="mr-2 h-5 w-5" /> Scan Card
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {cards.length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed border-border rounded-lg">
           <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-archive-restore mx-auto mb-4 text-muted-foreground"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-V8"/><path d="M9.5 12.5 12 15l2.5-2.5"/><path d="M12 15V9"/></svg>
           <h2 className="text-xl font-semibold text-muted-foreground">Your collection is empty.</h2>
-          <p className="text-muted-foreground mt-2">Start by scanning your first Pokémon card!</p>
-          <Button asChild className="mt-6">
-             <Link href="/dashboard/scan">
-               <PlusCircle className="mr-2 h-5 w-5" /> Scan a Card
-             </Link>
-          </Button>
+          <p className="text-muted-foreground mt-2">Start by scanning or generating your first Pokémon card!</p>
+          <div className="flex gap-2 justify-center mt-6">
+            <Button asChild variant="outline">
+              <Link href="/dashboard/generate">
+                <Sparkles className="mr-2 h-5 w-5" /> Generate a Card
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/dashboard/scan">
+                <PlusCircle className="mr-2 h-5 w-5" /> Scan a Card
+              </Link>
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">

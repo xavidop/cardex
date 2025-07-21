@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAuth, type Auth, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 import firebaseConfig from '@/config/firebase';
 
 // Define which keys from firebaseConfig are considered essential for initialization.
@@ -48,6 +48,9 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
+// Track if emulators have been connected to avoid multiple connections
+let emulatorsConnected = false;
+
 try {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
@@ -56,6 +59,18 @@ try {
   }
   auth = getAuth(app);
   db = getFirestore(app);
+  
+  // Connect to emulators in development - do this immediately after getting auth/db instances
+  if (process.env.NODE_ENV === 'development' && !emulatorsConnected && typeof window !== 'undefined') {
+    try {
+      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, 'localhost', 8080);
+      emulatorsConnected = true;
+      console.log('Firebase emulators connected successfully');
+    } catch (error) {
+      console.log('Emulator connection attempt (might already be connected):', error);
+    }
+  }
 } catch (error) {
   console.error("Firebase SDK Initialization Error (this occurred *after* the initial config check passed, possibly an issue with the values themselves being invalid for Firebase):", error);
   // Log config again, but mask API key, to show what was passed to initializeApp

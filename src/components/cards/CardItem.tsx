@@ -4,7 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Pencil, Trash2, Sparkles } from 'lucide-react';
 import type { PokemonCard } from '@/types';
 import {
   AlertDialog,
@@ -28,7 +29,17 @@ export default function CardItem({ card, onDelete, isDeleting }: CardItemProps) 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="p-4">
-        <CardTitle className="text-lg font-semibold truncate font-headline" title={card.name}>{card.name}</CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg font-semibold truncate font-headline" title={card.name}>
+            {card.name}
+          </CardTitle>
+          {card.isGenerated && (
+            <Badge variant="secondary" className="ml-2 flex items-center gap-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200">
+              <Sparkles className="h-3 w-3" />
+              AI Generated
+            </Badge>
+          )}
+        </div>
         <CardDescription className="text-xs text-muted-foreground">
           Set: {card.set} | Rarity: {card.rarity}
         </CardDescription>

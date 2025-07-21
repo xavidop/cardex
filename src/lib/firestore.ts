@@ -13,7 +13,7 @@ import {
   getDoc,
   orderBy,
 } from 'firebase/firestore';
-import { db } from './firebase'; // Main Firebase config
+import { db, auth } from './firebase'; // Main Firebase config
 import type { PokemonCard, ScannedCardData } from '@/types';
 
 const CARDS_COLLECTION = 'users'; // Top-level collection for users
@@ -31,6 +31,11 @@ export const addCardToCollection = async (
     console.error("addCardToCollection: User ID is missing.");
     throw new Error('User ID is required to add a card.');
   }
+  
+  console.log("DEBUG: Attempting to add card with userId:", userId);
+  console.log("DEBUG: Current auth user:", auth.currentUser?.uid);
+  console.log("DEBUG: Auth user matches:", auth.currentUser?.uid === userId);
+  
   try {
     const collectionRef = getPokemonCardsCollectionRef(userId);
     const docPayload = {

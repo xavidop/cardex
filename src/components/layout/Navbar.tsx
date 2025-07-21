@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn, LogOut, UserCircle, ScanLine, BookOpen } from 'lucide-react';
+import { LogIn, LogOut, UserCircle, ScanLine, BookOpen, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
@@ -57,6 +57,11 @@ export default function Navbar() {
                 <Button variant="ghost" asChild>
                   <Link href="/dashboard/scan">
                     <ScanLine className="mr-2 h-4 w-4" /> Scan Card
+                  </Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/dashboard/generate">
+                    <Sparkles className="mr-2 h-4 w-4" /> Generate Card
                   </Link>
                 </Button>
                 <Button variant="ghost" asChild>

@@ -5,6 +5,7 @@ A modern web application for managing your Pokémon card collection with AI-powe
 ## Features
 
 - 🤖 **AI Card Scanning**: Use Gemini Vision to automatically identify Pokémon cards from photos
+- ✨ **AI Card Generation**: Create custom Pokémon cards using Google Imagen4
 - 🔐 **Secure Authentication**: Firebase Authentication with email and Google login
 - 📱 **Responsive Design**: Modern UI built with Next.js and Tailwind CSS
 - 💾 **Cloud Storage**: Real-time data synchronization with Firestore
@@ -76,7 +77,7 @@ src/
 
 - Node.js 18+ 
 - Firebase project with Firestore and Authentication enabled
-- Google AI API key for Gemini Vision
+- Google AI API key for Gemini Vision and Imagen4
 
 ### Installation
 
@@ -122,6 +123,17 @@ npm run genkit:dev
 4. Review and edit the detected information
 5. Save the card to your collection
 
+### Card Generation
+1. Navigate to the generate page
+2. Fill out the card parameters:
+   - Pokemon name and type
+   - Card properties (Full Art, Holographic)
+   - Descriptions for the Pokemon and background
+   - Language and optional stats
+3. Click "Generate Pokemon Card" to create a custom card using AI
+4. Preview the generated card
+5. Save it to your collection if you like it
+
 ### Collection Management
 - View all your cards in a responsive grid layout
 - Edit card details by clicking on any card
@@ -143,9 +155,9 @@ Firestore Collection: users/{userId}/pokemon_cards/{cardId}
 
 ## AI Integration
 
-The app uses Google's Gemini Vision API through the Genkit framework to:
-- Analyze uploaded card images
-- Extract card name, set, and rarity information
+The app uses Google's AI services through the Genkit framework to:
+- **Gemini Vision API**: Analyze uploaded card images and extract card information
+- **Imagen4**: Generate custom Pokemon card artwork based on user parameters
 - Provide structured data for user review and confirmation
 
 ## Contributing
