@@ -36,7 +36,7 @@ export default function CollectionPage() {
     const interval = setInterval(() => {
       console.log('Refreshing cards to check for video generation updates...');
       fetchCards();
-    }, 5000); // Check every 15 seconds (more frequent for better UX)
+    }, 10000); // Check every 10 seconds (more frequent for better UX)
 
     return () => {
       console.log('Clearing automatic refresh interval');

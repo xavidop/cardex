@@ -90,6 +90,7 @@ export async function generateCardVideo(input: GenerateCardVideoInput): Promise<
         numberOfVideos: 1,
         aspectRatio: '9:16',
         durationSeconds: 5, // Set duration to 5 seconds
+        enhancePrompt: true,
       }
     });
 
