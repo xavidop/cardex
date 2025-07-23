@@ -2,10 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow all operations in emulator for development
-    // This will only apply when using Firebase emulators
+    // Temporarily allow all authenticated users to test auth
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }
