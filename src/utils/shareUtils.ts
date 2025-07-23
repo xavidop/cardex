@@ -209,8 +209,18 @@ export const nativeShare = async ({ cardName, cardImageUrl }: ShareOptions) => {
       // If we have an image and the browser supports file sharing
       if (cardImageUrl && navigator.canShare) {
         try {
-          // Convert data URL or Firebase Storage URL to blob
-          const response = await fetch(cardImageUrl);
+          let fetchUrl = cardImageUrl;
+          
+          // If it's a Firebase Storage URL (not a data URL), use the download route
+          if (cardImageUrl.startsWith('http') && 
+              (cardImageUrl.includes('firebasestorage.googleapis.com') || 
+               cardImageUrl.includes('localhost:9199') || 
+               cardImageUrl.includes('127.0.0.1:9199'))) {
+            fetchUrl = `/api/download?url=${encodeURIComponent(cardImageUrl)}`;
+          }
+          
+          // Convert data URL or use download route to get blob
+          const response = await fetch(fetchUrl);
           const blob = await response.blob();
           const file = new File([blob], `${cardName}-card.png`, { type: 'image/png' });
           
