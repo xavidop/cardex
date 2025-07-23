@@ -8,6 +8,7 @@ import { addCardToCollection } from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
+import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 
 export default function GenerateCardPage() {
   const { user } = useAuth();
@@ -91,6 +92,14 @@ export default function GenerateCardPage() {
         <p className="text-muted-foreground">
           Create your own custom Pokemon cards using AI-powered image generation
         </p>
+      </div>
+
+      {/* API Keys Warning - only show Gemini key warning for this page */}
+      <div className="mb-6">
+        <ApiKeysWarning 
+          requiredKeys={['geminiApiKey']} 
+          showDismiss={false}
+        />
       </div>
 
       <CardGenerator onCardGenerated={handleCardGenerated} />

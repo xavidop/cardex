@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScanLine, Sparkles, BookOpen, Camera } from 'lucide-react';
+import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -16,6 +17,11 @@ export default function DashboardPage() {
         <p className="text-lg text-muted-foreground">
           Manage your Pokémon card collection with ease.
         </p>
+      </div>
+
+      {/* API Keys Warning */}
+      <div className="mb-8">
+        <ApiKeysWarning />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">

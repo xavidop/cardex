@@ -16,6 +16,7 @@ import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { downloadCardFromBase64 } from '@/utils/downloadUtils';
 import { useAuth } from '@/hooks/useAuth';
+import { useApiKeys } from '@/hooks/useApiKeys';
 
 export interface GenerateFromPhotoInput {
   photoDataUri: string;
@@ -75,6 +76,7 @@ interface PhotoCardGeneratorProps {
 
 export function PhotoCardGenerator({ onCardGenerated, initialValues }: PhotoCardGeneratorProps) {
   const { user } = useAuth();
+  const { hasOpenAIKey } = useApiKeys();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string } | null>(null);
   const [error, setError] = useState<string>('');
@@ -159,6 +161,11 @@ export function PhotoCardGenerator({ onCardGenerated, initialValues }: PhotoCard
   const onSubmit = async (data: PhotoCardGeneratorForm) => {
     if (!user) {
       setError('You must be logged in to generate cards');
+      return;
+    }
+
+    if (!hasOpenAIKey) {
+      setError('OpenAI API key is required to generate cards from photos. Please configure it in Settings.');
       return;
     }
 
@@ -432,16 +439,30 @@ export function PhotoCardGenerator({ onCardGenerated, initialValues }: PhotoCard
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isGenerating || !imagePreview}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isGenerating || !imagePreview || !hasOpenAIKey}
+            >
               {isGenerating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Generating Card from Photo...
                 </>
+              ) : !hasOpenAIKey ? (
+                'OpenAI API Key Required'
               ) : (
                 'Generate Pokemon Card from Photo'
               )}
             </Button>
+
+            {!hasOpenAIKey && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-700">
+                  Please configure your OpenAI API key in <strong>Settings</strong> to generate cards from photos.
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-md">

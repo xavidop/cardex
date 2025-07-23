@@ -10,11 +10,13 @@ import { Loader2, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import CardForm, { type CardFormInputs } from './CardForm';
 import { useAuth } from '@/hooks/useAuth';
+import { useApiKeys } from '@/hooks/useApiKeys';
 import { addCardToCollection } from '@/lib/firestore';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
 export default function CardScanner() {
+  const { hasGeminiKey } = useApiKeys();
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanPokemonCardOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,12 @@ export default function CardScanner() {
   const handleScan = async () => {
     if (!imageDataUrl) {
       toast({ title: 'No image selected', description: 'Please select an image to scan.', variant: 'destructive' });
+      return;
+    }
+
+    if (!hasGeminiKey) {
+      setError('Gemini API key is required to scan Pokemon cards. Please configure it in Settings.');
+      toast({ title: 'API Key Required', description: 'Gemini API key is required to scan Pokemon cards. Please configure it in Settings.', variant: 'destructive' });
       return;
     }
 
@@ -179,24 +187,36 @@ export default function CardScanner() {
               </div>
               
               {imageDataUrl && (
-                <Button 
-                  onClick={handleScan} 
-                  disabled={isScanning || !imageDataUrl} 
-                  className="w-full py-6 text-lg font-semibold"
-                  size="lg"
-                >
-                  {isScanning ? (
-                    <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                      Analyzing Card...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-3 h-5 w-5" />
-                      Scan Card
-                    </>
+                <>
+                  <Button 
+                    onClick={handleScan} 
+                    disabled={isScanning || !imageDataUrl || !hasGeminiKey} 
+                    className="w-full py-6 text-lg font-semibold"
+                    size="lg"
+                  >
+                    {isScanning ? (
+                      <>
+                        <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                        Analyzing Card...
+                      </>
+                    ) : !hasGeminiKey ? (
+                      'Gemini API Key Required'
+                    ) : (
+                      <>
+                        <Upload className="mr-3 h-5 w-5" />
+                        Scan Card
+                      </>
+                    )}
+                  </Button>
+                  
+                  {!hasGeminiKey && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-sm text-yellow-700">
+                        Please configure your Gemini API key in <strong>Settings</strong> to scan Pokemon cards.
+                      </p>
+                    </div>
                   )}
-                </Button>
+                </>
               )}
             </div>
           )}

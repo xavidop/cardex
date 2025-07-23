@@ -16,6 +16,7 @@ import { Loader2, Download } from 'lucide-react';
 import { downloadCardFromBase64 } from '@/utils/downloadUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useApiKeys } from '@/hooks/useApiKeys';
 
 export interface GeneratePokemonCardInput {
   pokemonName: string;
@@ -79,6 +80,7 @@ interface CardGeneratorProps {
 
 export function CardGenerator({ onCardGenerated, initialValues }: CardGeneratorProps) {
   const { user } = useAuth();
+  const { hasGeminiKey } = useApiKeys();
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string } | null>(null);
@@ -135,6 +137,11 @@ export function CardGenerator({ onCardGenerated, initialValues }: CardGeneratorP
   const onSubmit = async (data: CardGeneratorForm) => {
     if (!user) {
       setError('You must be logged in to generate cards');
+      return;
+    }
+
+    if (!hasGeminiKey) {
+      setError('Gemini API key is required to generate cards. Please configure it in Settings.');
       return;
     }
 
@@ -394,16 +401,30 @@ export function CardGenerator({ onCardGenerated, initialValues }: CardGeneratorP
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isGenerating}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isGenerating || !hasGeminiKey}
+            >
               {isGenerating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Generating Card...
                 </>
+              ) : !hasGeminiKey ? (
+                'Gemini API Key Required'
               ) : (
                 'Generate Pokemon Card'
               )}
             </Button>
+
+            {!hasGeminiKey && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-700">
+                  Please configure your Gemini API key in <strong>Settings</strong> to generate cards.
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-md">

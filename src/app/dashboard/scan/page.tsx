@@ -1,4 +1,5 @@
 import CardScanner from '@/components/cards/CardScanner';
+import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 
 export default function ScanCardPage() {
   return (
@@ -9,6 +10,15 @@ export default function ScanCardPage() {
           Upload an image of your Pokémon card to automatically identify and add it to your collection
         </p>
       </div>
+      
+      {/* API Keys Warning - only show Gemini key warning for scanning */}
+      <div className="max-w-4xl mx-auto">
+        <ApiKeysWarning 
+          requiredKeys={['geminiApiKey']} 
+          showDismiss={false}
+        />
+      </div>
+      
       <CardScanner />
     </div>
   );

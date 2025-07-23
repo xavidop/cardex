@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, Sparkles, Download, Play, Pause, Video, Clock, AlertCircle, RotateCcw, FileDown, Eye } from 'lucide-react';
+import { Pencil, Trash2, Sparkles, Download, Play, Pause, Video, Clock, AlertCircle, RotateCcw, FileDown, Eye, Settings } from 'lucide-react';
 import type { PokemonCard } from '@/types';
 import { downloadCardImage, downloadCardVideo } from '@/utils/downloadUtils';
 import { useToast } from '@/hooks/use-toast';
 import ShareButton from '@/components/ui/share-button';
 import { useState } from 'react';
 import { generateVideoForExistingCard } from '@/lib/firestore';
+import { useApiKeys } from '@/hooks/useApiKeys';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,7 @@ interface CardItemProps {
 
 export default function CardItem({ card, onDelete, onUpdate, isDeleting }: CardItemProps) {
   const { toast } = useToast();
+  const { hasGeminiKey } = useApiKeys();
   const [showVideo, setShowVideo] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
 
@@ -288,29 +290,101 @@ export default function CardItem({ card, onDelete, onUpdate, isDeleting }: CardI
 
           {/* Video Generation Controls */}
           {!card.videoUrl && card.videoGenerationStatus !== 'generating' && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleGenerateVideo}
-              disabled={isGeneratingVideo}
-              className="w-full bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200 text-purple-700"
-            >
-              <Video className="h-4 w-4 mr-2" />
-              {isGeneratingVideo ? 'Starting...' : 'Make Card Live'}
-            </Button>
+            hasGeminiKey ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleGenerateVideo}
+                disabled={isGeneratingVideo}
+                className="w-full bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200 text-purple-700"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                {isGeneratingVideo ? 'Starting...' : 'Make Card Live'}
+              </Button>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    Make Card Live
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-600" />
+                      Gemini API Key Required
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      To generate videos for your cards, you need to configure your Gemini API key in the settings. 
+                      This feature uses Google's Veo model to create animated videos from your card images.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <Link href="/dashboard/settings">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configure API Keys
+                      </Link>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )
           )}
           
           {card.videoGenerationStatus === 'failed' && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleGenerateVideo}
-              disabled={isGeneratingVideo}
-              className="w-full border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              {isGeneratingVideo ? 'Starting...' : 'Retry Video Generation'}
-            </Button>
+            hasGeminiKey ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleGenerateVideo}
+                disabled={isGeneratingVideo}
+                className="w-full border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {isGeneratingVideo ? 'Starting...' : 'Retry Video Generation'}
+              </Button>
+            ) : (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Retry Video Generation
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-yellow-600" />
+                      Gemini API Key Required
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      To retry video generation for your card, you need to configure your Gemini API key in the settings. 
+                      This feature uses Google's Veo model to create animated videos from your card images.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <Link href="/dashboard/settings">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configure API Keys
+                      </Link>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )
           )}
 
           {/* Download Video Button - Show when video is ready */}

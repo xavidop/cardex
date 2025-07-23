@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
+import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 
 export default function GenerateFromPhotoPage() {
   const { user } = useAuth();
@@ -97,6 +98,14 @@ export default function GenerateFromPhotoPage() {
         <p className="text-muted-foreground">
           Upload your own photo and transform it into a custom Pokemon card using AI-powered image generation
         </p>
+      </div>
+
+      {/* API Keys Warning - only show OpenAI key warning for this page */}
+      <div className="mb-6">
+        <ApiKeysWarning 
+          requiredKeys={['openaiApiKey']} 
+          showDismiss={false}
+        />
       </div>
 
       <PhotoCardGenerator onCardGenerated={handleCardGenerated} />
