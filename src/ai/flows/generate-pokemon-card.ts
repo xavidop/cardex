@@ -9,7 +9,6 @@
  * - GeneratePokemonCardOutput - The return type for the generatePokemonCard function.
  */
 
-import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { GoogleGenAI } from '@google/genai';
 import { getUserApiKeys } from '@/lib/firestore';
@@ -44,64 +43,53 @@ const GeneratePokemonCardOutputSchema = z.object({
 export type GeneratePokemonCardOutput = z.infer<typeof GeneratePokemonCardOutputSchema>;
 
 export async function generatePokemonCard(input: GeneratePokemonCardInput): Promise<GeneratePokemonCardOutput> {
-  return generatePokemonCardFlow(input);
-}
-
-const generatePokemonCardFlow = ai.defineFlow(
-  {
-    name: 'generatePokemonCardFlow',
-    inputSchema: GeneratePokemonCardInputSchema,
-    outputSchema: GeneratePokemonCardOutputSchema,
-  },
-  async (params: GeneratePokemonCardInput) => {
-    try {
-      // Get user's API keys from Firestore
-      const userApiKeys = await getUserApiKeys(params.userId);
-      const apiKey = userApiKeys?.geminiApiKey || process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        return { 
-          error: 'Gemini API key is required. Please configure your API key in Settings or set GOOGLE_GENAI_API_KEY environment variable.' 
-        };
-      }
-
-      const genAI = new GoogleGenAI({
-        apiKey: apiKey,
-      });
-
-      // Generate the detailed prompt for the Pokemon card
-      const prompt = generateCardPrompt(params);
-      console.log("Generated prompt:", prompt);
-
-      const response = await genAI.models.generateImages({
-        model: 'models/imagen-4.0-ultra-generate-preview-06-06',
-        prompt: prompt,
-        config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/jpeg',
-          aspectRatio: '3:4' // Pokemon cards are roughly 3:4 aspect ratio
-        },
-      });
-
-      if (!response?.generatedImages || response.generatedImages.length === 0) {
-        return { error: 'No images generated.' };
-      }
-
-      const generatedImage = response.generatedImages[0];
-      if (!generatedImage?.image?.imageBytes) {
-        return { error: 'Generated image data is missing.' };
-      }
-
-      return {
-        imageBase64: generatedImage.image.imageBytes,
-        prompt: prompt,
+  try {
+    // Get user's API keys from Firestore
+    const userApiKeys = await getUserApiKeys(input.userId);
+    const apiKey = userApiKeys?.geminiApiKey || process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return { 
+        error: 'Gemini API key is required. Please configure your API key in Settings or set GOOGLE_GENAI_API_KEY environment variable.' 
       };
-    } catch (error: any) {
-      console.error('Error generating Pokemon card:', error);
-      return { error: `Failed to generate Pokemon card: ${error?.message || 'Unknown error'}` };
     }
+
+    const genAI = new GoogleGenAI({
+      apiKey: apiKey,
+    });
+
+    // Generate the detailed prompt for the Pokemon card
+    const prompt = generateCardPrompt(input);
+    console.log("Generated prompt:", prompt);
+
+    const response = await genAI.models.generateImages({
+      model: 'models/imagen-4.0-ultra-generate-preview-06-06',
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: 'image/jpeg',
+        aspectRatio: '3:4' // Pokemon cards are roughly 3:4 aspect ratio
+      },
+    });
+
+    if (!response?.generatedImages || response.generatedImages.length === 0) {
+      return { error: 'No images generated.' };
+    }
+
+    const generatedImage = response.generatedImages[0];
+    if (!generatedImage?.image?.imageBytes) {
+      return { error: 'Generated image data is missing.' };
+    }
+
+    return {
+      imageBase64: generatedImage.image.imageBytes,
+      prompt: prompt,
+    };
+  } catch (error: any) {
+    console.error('Error generating Pokemon card:', error);
+    return { error: `Failed to generate Pokemon card: ${error?.message || 'Unknown error'}` };
   }
-);
+}
 
 function generateCardPrompt(params: GeneratePokemonCardInput): string {
   const {

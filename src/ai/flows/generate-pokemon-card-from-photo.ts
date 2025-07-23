@@ -9,7 +9,6 @@
  * - GenerateFromPhotoOutput - The return type for the generatePokemonCardFromPhoto function.
  */
 
-import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import OpenAI from 'openai';
 import { getUserApiKeys } from '@/lib/firestore';
@@ -46,77 +45,66 @@ const GenerateFromPhotoOutputSchema = z.object({
 export type GenerateFromPhotoOutput = z.infer<typeof GenerateFromPhotoOutputSchema>;
 
 export async function generatePokemonCardFromPhoto(input: GenerateFromPhotoInput): Promise<GenerateFromPhotoOutput> {
-  return generateFromPhotoFlow(input);
-}
-
-const generateFromPhotoFlow = ai.defineFlow(
-  {
-    name: 'generateFromPhotoFlow',
-    inputSchema: GenerateFromPhotoInputSchema,
-    outputSchema: GenerateFromPhotoOutputSchema,
-  },
-  async (params: GenerateFromPhotoInput) => {
-    try {
-      // Get user's API keys from Firestore
-      const userApiKeys = await getUserApiKeys(params.userId);
-      const apiKey = userApiKeys?.openaiApiKey || process.env.OPENAI_API_KEY;
-      
-      if (!apiKey) {
-        return { 
-          error: 'OpenAI API key is required. Please configure your API key in Settings or set OPENAI_API_KEY environment variable.' 
-        };
-      }
-
-      const openai = new OpenAI({
-        apiKey: apiKey,
-      });
-
-      // Generate the detailed prompt for the Pokemon card based on photo
-      console.log("Generating Pokemon card using reference photo...");
-      
-      // Generate the enhanced prompt for the Pokemon card
-      const enhancedPrompt = generatePhotoBasedCardPrompt(params);
-      console.log("Generated prompt for image generation:", enhancedPrompt);
-
-      // Use OpenAI responses.create with reference image for image generation
-      const response = await openai.responses.create({
-        model: "gpt-4.1",
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: enhancedPrompt },
-              {
-                type: "input_image",
-                image_url: params.photoDataUri,
-                detail: "high"
-              },
-            ],
-          },
-        ],
-        tools: [{ type: "image_generation" }],
-      });
-
-      const imageData = response.output
-        .filter((output) => output.type === "image_generation_call")
-        .map((output) => output.result);
-
-      if (imageData.length > 0) {
-        const imageBase64 = imageData[0];
-        return {
-          imageBase64: imageBase64 || "",
-          prompt: enhancedPrompt,
-        };
-      } else {
-        console.log("No image generated, response output:", response.output);
-        return { error: 'No image generated from the reference photo.' };
-      }
-    } catch (error: any) {
-      console.error('Error generating Pokemon card from photo:', error);
-      return { error: `Failed to generate Pokemon card: ${error?.message || 'Unknown error'}` };
+  try {
+    // Get user's API keys from Firestore
+    const userApiKeys = await getUserApiKeys(input.userId);
+    const apiKey = userApiKeys?.openaiApiKey || process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      return { 
+        error: 'OpenAI API key is required. Please configure your API key in Settings or set OPENAI_API_KEY environment variable.' 
+      };
     }
+
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    });
+
+    // Generate the detailed prompt for the Pokemon card based on photo
+    console.log("Generating Pokemon card using reference photo...");
+    
+    // Generate the enhanced prompt for the Pokemon card
+    const enhancedPrompt = generatePhotoBasedCardPrompt(input);
+    console.log("Generated prompt for image generation:", enhancedPrompt);
+
+    // Use OpenAI responses.create with reference image for image generation
+    const response = await openai.responses.create({
+      model: "gpt-4.1",
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: enhancedPrompt },
+            {
+              type: "input_image",
+              image_url: input.photoDataUri,
+              detail: "high"
+            },
+          ],
+        },
+      ],
+      tools: [{ type: "image_generation" }],
+    });
+
+    const imageData = response.output
+      .filter((output) => output.type === "image_generation_call")
+      .map((output) => output.result);
+
+    if (imageData.length > 0) {
+      const imageBase64 = imageData[0];
+      return {
+        imageBase64: imageBase64 || "",
+        prompt: enhancedPrompt,
+      };
+    } else {
+      console.log("No image generated, response output:", response.output);
+      return { error: 'No image generated from the reference photo.' };
+    }
+  } catch (error: any) {
+    console.error('Error generating Pokemon card from photo:', error);
+    return { error: `Failed to generate Pokemon card: ${error?.message || 'Unknown error'}` };
   }
-);
+}
 
 function generatePhotoBasedCardPrompt(params: GenerateFromPhotoInput): string {
   const {
