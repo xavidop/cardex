@@ -18,6 +18,7 @@ import { db, auth, storage } from './firebase'; // Main Firebase config
 import type { PokemonCard, ScannedCardData, UserProfile, UserApiKeys } from '@/types';
 import { uploadCardImageToStorage, uploadVideoToStorage } from '@/utils/storageUtils';
 import { ref, deleteObject } from 'firebase/storage';
+import { filterUndefinedValues } from './utils';
 import { generateCardVideo } from '@/ai/flows/generate-card-video';
 
 const CARDS_COLLECTION = 'users'; // Top-level collection for users
@@ -322,8 +323,12 @@ export const createOrUpdateUserProfile = async (userId: string, profileData: Par
   
   try {
     const userRef = doc(db, 'users', userId);
+    
+    // Filter out undefined values to prevent Firestore errors
+    const filteredProfileData = filterUndefinedValues(profileData);
+    
     const updateData: any = {
-      ...profileData,
+      ...filteredProfileData,
       id: userId,
       updatedAt: serverTimestamp(),
     };

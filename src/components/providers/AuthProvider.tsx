@@ -5,6 +5,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { createOrUpdateUserProfile } from '@/lib/firestore';
+import { filterUndefinedValues } from '@/lib/utils';
 
 export interface AuthContextType {
   user: User | null;
@@ -24,11 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Create or update user profile when user signs in
       if (currentUser) {
         try {
-          await createOrUpdateUserProfile(currentUser.uid, {
+          const profileData = filterUndefinedValues({
             email: currentUser.email || '',
             displayName: currentUser.displayName || undefined,
             photoURL: currentUser.photoURL || undefined,
           });
+          
+          await createOrUpdateUserProfile(currentUser.uid, profileData);
         } catch (error) {
           console.error('Error creating/updating user profile:', error);
           // Don't block the auth flow for profile creation errors
