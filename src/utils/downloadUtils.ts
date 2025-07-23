@@ -21,16 +21,35 @@ export async function downloadCardImage(imageUrl: string, cardName: string): Pro
       // Data URL - use directly
       link.href = imageUrl;
     } else if (imageUrl.startsWith('http')) {
-      // Firebase Storage URL or other HTTP URL - fetch and convert to blob URL
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      link.href = blobUrl;
-      
-      // Clean up the blob URL after download
-      link.addEventListener('click', () => {
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-      });
+      // Firebase Storage URL or other HTTP URL - use proxy approach to avoid CORS
+      try {
+        const proxyUrl = `/api/download?url=${encodeURIComponent(imageUrl)}`;
+        const response = await fetch(proxyUrl);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch through proxy');
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        
+        // Clean up the blob URL after download
+        link.addEventListener('click', () => {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        });
+      } catch (proxyError) {
+        console.error('Proxy download failed, trying direct fetch:', proxyError);
+        // Fallback to direct fetch (might still hit CORS)
+        const response = await fetch(imageUrl, { mode: 'cors' });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        
+        link.addEventListener('click', () => {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        });
+      }
     } else {
       // Assume it's a base64 string without data URL prefix
       const dataUrl = `data:image/png;base64,${imageUrl}`;
@@ -84,16 +103,35 @@ export async function downloadCardVideo(videoUrl: string, cardName: string): Pro
       // Data URL - use directly
       link.href = videoUrl;
     } else if (videoUrl.startsWith('http')) {
-      // Firebase Storage URL or other HTTP URL - fetch and convert to blob URL
-      const response = await fetch(videoUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      link.href = blobUrl;
-      
-      // Clean up the blob URL after download
-      link.addEventListener('click', () => {
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
-      });
+      // Firebase Storage URL or other HTTP URL - use proxy approach to avoid CORS
+      try {
+        const proxyUrl = `/api/download?url=${encodeURIComponent(videoUrl)}`;
+        const response = await fetch(proxyUrl);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch through proxy');
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        
+        // Clean up the blob URL after download
+        link.addEventListener('click', () => {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        });
+      } catch (proxyError) {
+        console.error('Proxy download failed, trying direct fetch:', proxyError);
+        // Fallback to direct fetch (might still hit CORS)
+        const response = await fetch(videoUrl, { mode: 'cors' });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        
+        link.addEventListener('click', () => {
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+        });
+      }
     } else {
       // Assume it's a base64 string without data URL prefix
       const dataUrl = `data:video/mp4;base64,${videoUrl}`;
