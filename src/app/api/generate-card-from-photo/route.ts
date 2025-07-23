@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generatePokemonCard } from '@/ai/flows/generate-pokemon-card';
+import { generatePokemonCardFromPhoto } from '@/ai/flows/generate-pokemon-card-from-photo';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
     // Validate required fields - including userId
-    const requiredFields = ['userId', 'pokemonName', 'pokemonType', 'backgroundDescription', 'pokemonDescription'];
+    const requiredFields = ['userId', 'photoDataUri', 'pokemonName', 'pokemonType', 'styleDescription'];
     const missingFields = requiredFields.filter(field => !body[field]);
     
     if (missingFields.length > 0) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the AI flow
-    const result = await generatePokemonCard(body);
+    const result = await generatePokemonCardFromPhoto(body);
 
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 500 });

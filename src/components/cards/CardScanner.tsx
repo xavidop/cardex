@@ -59,7 +59,10 @@ export default function CardScanner() {
     setShowForm(false);
 
     try {
-      const result = await scanPokemonCard({ photoDataUri: imageDataUrl });
+      const result = await scanPokemonCard({ 
+        photoDataUri: imageDataUrl,
+        userId: user?.uid 
+      });
       if (result.error) {
         setError(result.error);
         toast({ title: 'Scan Failed', description: result.error, variant: 'destructive' });
@@ -125,79 +128,133 @@ export default function CardScanner() {
 
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-headline">Scan Pokémon Card</CardTitle>
-          <CardDescription>Upload an image of your Pokémon card to identify its details.</CardDescription>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
+        <CardHeader className="text-center pb-4">
+          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <Upload className="h-8 w-8 text-primary" />
+          </div>
+          <CardTitle className="text-xl">Upload Card Image</CardTitle>
+          <CardDescription>
+            Choose a clear image of your Pokémon card for best scanning results
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
-            <Label htmlFor="card-image" className="text-base">Upload Card Image</Label>
-            <Input
-              id="card-image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              ref={fileInputRef}
-              className="mt-2 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-            />
+          <div className="space-y-4">
+            <div className="relative">
+              <input
+                id="card-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                ref={fileInputRef}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="w-full h-12 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 hover:bg-muted/30 hover:border-muted-foreground/50 transition-all duration-200 flex items-center justify-center">
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <Upload className="h-4 w-4" />
+                  <span className="text-sm font-medium">Choose file or drag and drop</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Supported formats: JPG, PNG, WEBP • Max size: 10MB
+            </p>
           </div>
 
           {imagePreview && (
-            <div className="mt-4 p-4 border border-dashed border-border rounded-lg bg-muted/50">
-              <h3 className="text-lg font-medium mb-2 text-center">Image Preview</h3>
-              <Image
-                src={imagePreview}
-                alt="Card preview"
-                width={300}
-                height={420}
-                className="rounded-md object-contain mx-auto shadow-md aspect-[63/88] max-w-xs"
-                data-ai-hint="pokemon card"
-              />
-            </div>
-          )}
-
-          {imageDataUrl && (
-            <Button onClick={handleScan} disabled={isScanning || !imageDataUrl} className="w-full mt-4 text-lg py-6">
-              {isScanning ? (
-                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-              ) : (
-                <Upload className="mr-2 h-6 w-6" />
+            <div className="space-y-4">
+              <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg p-6 text-center">
+                <h3 className="text-lg font-semibold mb-4 text-foreground">Preview</h3>
+                <div className="inline-block p-3 bg-background rounded-lg shadow-md">
+                  <Image
+                    src={imagePreview}
+                    alt="Card preview"
+                    width={300}
+                    height={420}
+                    className="rounded-md object-contain mx-auto aspect-[63/88] max-w-[250px] shadow-sm"
+                    data-ai-hint="pokemon card"
+                  />
+                </div>
+              </div>
+              
+              {imageDataUrl && (
+                <Button 
+                  onClick={handleScan} 
+                  disabled={isScanning || !imageDataUrl} 
+                  className="w-full py-6 text-lg font-semibold"
+                  size="lg"
+                >
+                  {isScanning ? (
+                    <>
+                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                      Analyzing Card...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-3 h-5 w-5" />
+                      Scan Card
+                    </>
+                  )}
+                </Button>
               )}
-              {isScanning ? 'Scanning...' : 'Scan Card'}
-            </Button>
+            </div>
           )}
         </CardContent>
       </Card>
       
       {error && !showForm && (
-         <Card className="border-destructive bg-destructive/10 shadow-lg">
-          <CardHeader className="flex flex-row items-center space-x-3">
-            <AlertCircle className="h-6 w-6 text-destructive" />
-            <CardTitle className="text-destructive">Scan Failed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive-foreground">{error}</p>
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+              </div>
+              <div className="flex-1 space-y-1">
+                <h3 className="text-sm font-semibold text-destructive">Scan Failed</h3>
+                <p className="text-sm text-muted-foreground">{error}</p>
+                <p className="text-xs text-muted-foreground">
+                  Try taking a clearer photo or ensure the card is fully visible.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {showForm && scanResult?.cardDetails && imageDataUrl && (
-        <CardForm
-          initialData={{
-            name: scanResult.cardDetails.name || '',
-            set: scanResult.cardDetails.set || '',
-            rarity: scanResult.cardDetails.rarity || '',
-          }}
-          imageDataUrlFromScan={imageDataUrl}
-          onSubmit={handleSaveCard}
-          isSubmitting={isSubmitting}
-          submitButtonText="Add to Collection"
-          formTitle="Confirm Card Details"
-          formDescription="Review the scanned details and save the card to your collection."
-          onCancel={handleCancelForm}
-        />
+        <div className="space-y-4">
+          <div className="flex items-center justify-center space-x-3 py-4">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-200">
+                Card Successfully Scanned!
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-300">
+                Review the details below and add to your collection
+              </p>
+            </div>
+          </div>
+          
+          <CardForm
+            initialData={{
+              name: scanResult.cardDetails.name || '',
+              set: scanResult.cardDetails.set || '',
+              rarity: scanResult.cardDetails.rarity || '',
+            }}
+            imageDataUrlFromScan={imageDataUrl}
+            onSubmit={handleSaveCard}
+            isSubmitting={isSubmitting}
+            submitButtonText="Add to Collection"
+            formTitle="Confirm Card Details"
+            formDescription="Review the scanned details and save the card to your collection."
+            onCancel={handleCancelForm}
+          />
+        </div>
       )}
     </div>
   );

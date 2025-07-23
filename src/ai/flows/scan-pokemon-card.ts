@@ -9,7 +9,7 @@
  * - ScanPokemonCardOutput - The return type for the scanPokemonCard function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, createUserAI} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ScanPokemonCardInputSchema = z.object({
@@ -18,6 +18,7 @@ const ScanPokemonCardInputSchema = z.object({
     .describe(
       "A photo of a Pokemon card, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  userId: z.string().describe("The user ID for personalized API key usage.").optional(),
 });
 export type ScanPokemonCardInput = z.infer<typeof ScanPokemonCardInputSchema>;
 
@@ -36,40 +37,60 @@ export async function scanPokemonCard(input: ScanPokemonCardInput): Promise<Scan
   return scanPokemonCardFlow(input);
 }
 
-const scanPokemonCardPrompt = ai.definePrompt({
-  name: 'scanPokemonCardPrompt',
-  input: {schema: ScanPokemonCardInputSchema},
-  output: {schema: ScanPokemonCardOutputSchema},
-  prompt: `You are an expert Pokemon card appraiser. Use the following image to identify the card's name, first set it was introduced in, and rarity. If you are unable to determine any of these values, leave them blank.\n
-  Photo: {{media url=photoDataUri}}
-  \n
-  Respond using the following format:
-  {
-    "cardDetails": {
-      "name": "Pokemon card name",
-      "set": "Pokemon first card set it was introduced in",
-      "rarity": "Pokemon card rarity"
+async function createScanPromptAndFlow(userAI: any) {
+  const scanPokemonCardPrompt = userAI.definePrompt({
+    name: 'scanPokemonCardPrompt',
+    input: {schema: ScanPokemonCardInputSchema},
+    output: {schema: ScanPokemonCardOutputSchema},
+    prompt: `You are an expert Pokemon card appraiser. Use the following image to identify the card's name, first set it was introduced in, and rarity. If you are unable to determine any of these values, leave them blank.\n
+    Photo: {{media url=photoDataUri}}
+    \n
+    Respond using the following format:
+    {
+      "cardDetails": {
+        "name": "Pokemon card name",
+        "set": "Pokemon first card set it was introduced in",
+        "rarity": "Pokemon card rarity"
+      }
     }
-  }
-  \nIf you cannot identify the Pokemon card or if the image does not contain a Pokemon card, respond with the following format:
-  {
-    "error": "Error message describing why the card could not be identified"
-  }`,
-});
+    \nIf you cannot identify the Pokemon card or if the image does not contain a Pokemon card, respond with the following format:
+    {
+      "error": "Error message describing why the card could not be identified"
+    }`,
+  });
 
-const scanPokemonCardFlow = ai.defineFlow(
-  {
-    name: 'scanPokemonCardFlow',
-    inputSchema: ScanPokemonCardInputSchema,
-    outputSchema: ScanPokemonCardOutputSchema,
-  },
-  async input => {
-    try {
-      const {output} = await scanPokemonCardPrompt(input);
-      return output!;
-    } catch (error: any) {
-      console.error('Error during card scanning:', error);
-      return {error: 'Failed to scan Pokemon card.'};
+  const scanPokemonCardFlow = userAI.defineFlow(
+    {
+      name: 'scanPokemonCardFlow',
+      inputSchema: ScanPokemonCardInputSchema,
+      outputSchema: ScanPokemonCardOutputSchema,
+    },
+    async (input: ScanPokemonCardInput) => {
+      try {
+        const {output} = await scanPokemonCardPrompt(input);
+        return output!;
+      } catch (error: any) {
+        console.error('Error during card scanning:', error);
+        return {error: 'Failed to scan Pokemon card.'};
+      }
     }
+  );
+
+  return scanPokemonCardFlow;
+}
+
+async function scanPokemonCardFlow(input: ScanPokemonCardInput): Promise<ScanPokemonCardOutput> {
+  try {
+    // Get user-specific AI instance if userId provided
+    const userAI = input.userId ? await createUserAI(input.userId) : ai;
+    
+    // Create the flow with the appropriate AI instance
+    const flow = await createScanPromptAndFlow(userAI);
+    
+    // Execute the flow
+    return await flow(input);
+  } catch (error: any) {
+    console.error('Error in scan flow setup:', error);
+    return {error: 'Failed to scan Pokemon card.'};
   }
-);
+}

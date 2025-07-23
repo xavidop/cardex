@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScanLine, Sparkles, BookOpen } from 'lucide-react';
+import { ScanLine, Sparkles, BookOpen, Camera } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -52,6 +52,25 @@ export default function DashboardPage() {
             <Button asChild className="w-full">
               <Link href="/dashboard/generate">
                 Generate Card
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Camera className="mr-2 h-5 w-5" />
+              Photo Cards
+            </CardTitle>
+            <CardDescription>
+              Transform your photos into Pokemon cards using AI
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/dashboard/generate-from-photo">
+                Create Photo Card
               </Link>
             </Button>
           </CardContent>

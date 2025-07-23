@@ -6,11 +6,17 @@ export interface PokemonCard {
   name: string;
   set: string;
   rarity: string;
-  imageDataUrl: string; // data URI of the card image
+  imageUrl: string; // Firebase Storage URL of the card image (NOT raw image data)
   createdAt: Timestamp;
   updatedAt: Timestamp;
   isGenerated?: boolean; // Flag to indicate if this is an AI-generated card
+  isPhotoGenerated?: boolean; // Flag to indicate if this is generated from a photo
   prompt?: string; // The prompt used to generate the card (for generated cards)
+  generationParams?: CardGenerationParams; // Parameters used for regular AI generation
+  photoGenerationParams?: PhotoCardGenerationParams; // Parameters used for photo-based generation
+  videoUrl?: string; // Firebase Storage URL of the generated video (NOT raw video data)
+  videoGenerationStatus?: 'pending' | 'generating' | 'completed' | 'failed'; // Status of video generation
+  videoPrompt?: string; // The prompt used to generate the video
 }
 
 // For AI Scan result, before saving to Firestore
@@ -42,5 +48,37 @@ export interface CardGenerationParams {
 export interface GeneratedCard {
   imageBase64: string;
   prompt: string;
-  params: CardGenerationParams;
+}
+
+// User profile and settings
+export interface UserProfile {
+  id: string; // Same as Firebase Auth uid
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  apiKeys?: UserApiKeys;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface UserApiKeys {
+  geminiApiKey?: string;
+  openaiApiKey?: string;
+}
+
+// For Pokemon card generation from photo parameters
+export interface PhotoCardGenerationParams {
+  photoDataUri?: string; // Optional - not saved to Firestore (too large), only used during generation
+  pokemonName: string;
+  pokemonType: string;
+  styleDescription: string;
+  language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
+  hp?: number;
+  attackName1?: string;
+  attackDamage1?: number;
+  attackName2?: string;
+  attackDamage2?: number;
+  weakness?: string;
+  resistance?: string;
+  retreatCost?: number;
 }

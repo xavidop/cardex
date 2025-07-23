@@ -12,8 +12,10 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { GoogleGenAI } from '@google/genai';
+import { getUserApiKeys } from '@/lib/firestore';
 
 const GeneratePokemonCardInputSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
   pokemonName: z.string().min(1, "Pokemon name is required"),
   pokemonType: z.string().min(1, "Pokemon type is required"), 
   isIllustrationRare: z.boolean(),
@@ -52,28 +54,32 @@ const generatePokemonCardFlow = ai.defineFlow(
     outputSchema: GeneratePokemonCardOutputSchema,
   },
   async (params: GeneratePokemonCardInput) => {
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      return { error: 'Google AI API key is required. Please set GOOGLE_GENAI_API_KEY or GEMINI_API_KEY environment variable.' };
-    }
-
-    const genAI = new GoogleGenAI({
-      apiKey: apiKey,
-    });
-
-    // Generate the detailed prompt for the Pokemon card
-    const prompt = generateCardPrompt(params);
-    console.log("Generated prompt:", prompt);
-
     try {
+      // Get user's API keys from Firestore
+      const userApiKeys = await getUserApiKeys(params.userId);
+      const apiKey = userApiKeys?.geminiApiKey || process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
+      
+      if (!apiKey) {
+        return { 
+          error: 'Gemini API key is required. Please configure your API key in Settings or set GOOGLE_GENAI_API_KEY environment variable.' 
+        };
+      }
+
+      const genAI = new GoogleGenAI({
+        apiKey: apiKey,
+      });
+
+      // Generate the detailed prompt for the Pokemon card
+      const prompt = generateCardPrompt(params);
+      console.log("Generated prompt:", prompt);
+
       const response = await genAI.models.generateImages({
         model: 'models/imagen-4.0-ultra-generate-preview-06-06',
         prompt: prompt,
         config: {
           numberOfImages: 1,
           outputMimeType: 'image/jpeg',
-          aspectRatio: '3:4', // Pokemon cards are roughly 3:4 aspect ratio
+          aspectRatio: '3:4' // Pokemon cards are roughly 3:4 aspect ratio
         },
       });
 

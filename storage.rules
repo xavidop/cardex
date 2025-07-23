@@ -1,0 +1,24 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to cards, but require authentication for writing
+    match /cards/{allPaths=**} {
+      allow read: if true;  // Public read access for sharing
+      allow write: if request.auth != null;  // Authenticated write access
+    }
+    
+    // Allow authenticated users to read and write their own user files
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

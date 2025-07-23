@@ -55,7 +55,7 @@ export default function CardForm({
       name: initialData?.name || '',
       set: initialData?.set || '',
       rarity: initialData?.rarity || '',
-      imageDataUrl: imageDataUrlFromScan || (initialData as PokemonCard)?.imageDataUrl || '',
+      imageDataUrl: imageDataUrlFromScan || (initialData as PokemonCard)?.imageUrl || '',
     },
   });
 
