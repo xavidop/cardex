@@ -64,7 +64,7 @@ try {
   storage = getStorage(app);
   
   // Connect to emulators in development - do this immediately after getting auth/db instances
-  if (process.env.NODE_ENV === 'development' && !emulatorsConnected && typeof window !== 'undefined') {
+  if (process.env.NODE_ENV === 'development' && !emulatorsConnected) {
     try {
       connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
       connectFirestoreEmulator(db, 'localhost', 8080);

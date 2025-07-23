@@ -354,6 +354,22 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     if (userSnap.exists()) {
       return userSnap.data() as UserProfile;
     }
+    
+    // Create a basic user profile if it doesn't exist
+    console.log(`User profile not found for ${userId}, creating basic profile...`);
+    const basicProfile: Partial<UserProfile> = {
+      email: '',
+      displayName: 'Anonymous User',
+    };
+    
+    await createOrUpdateUserProfile(userId, basicProfile);
+    
+    // Return the newly created profile
+    const newUserSnap = await getDoc(userRef);
+    if (newUserSnap.exists()) {
+      return newUserSnap.data() as UserProfile;
+    }
+    
     return null;
   } catch (error) {
     console.error('Error getting user profile:', error);
