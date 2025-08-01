@@ -10,8 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "emulators": "firebase emulators:start",
-    "emulators:ui": "firebase emulators:start --only hosting,firestore,auth",
+    "emulators": "firebase emulators:start --project demo-app",
+    "emulators:ui": "firebase emulators:start --only pubsub,functions,firestore,auth,storage --project demo-app",
     "dev:full": "concurrently \"npm run emulators\" \"npm run dev\""
   },
   "dependencies": {
