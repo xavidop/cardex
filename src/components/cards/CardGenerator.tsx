@@ -26,6 +26,7 @@ export interface GeneratePokemonCardInput {
   backgroundDescription: string;
   pokemonDescription: string;
   language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
+  model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image-preview';
   hp?: number;
   attackName1?: string;
   attackDamage1?: number;
@@ -53,6 +54,13 @@ const languages = [
   { value: 'italian', label: 'Italian' },
 ] as const;
 
+const models = [
+  { value: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4.0 Ultra' },
+  { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0 Standard' },
+  { value: 'imagen-4.0-fast-generate-001', label: 'Imagen 4.0 Fast' },
+  { value: 'gemini-2.5-flash-image-preview', label: 'Gemini 2.5 Flash' },
+] as const;
+
 const cardGeneratorSchema = z.object({
   pokemonName: z.string().min(1, 'Pokemon name is required'),
   pokemonType: z.string().min(1, 'Pokemon type is required'),
@@ -61,6 +69,7 @@ const cardGeneratorSchema = z.object({
   backgroundDescription: z.string().min(10, 'Background description must be at least 10 characters'),
   pokemonDescription: z.string().min(10, 'Pokemon description must be at least 10 characters'),
   language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
+  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image-preview']),
   hp: z.number().min(10).max(999).optional(),
   attackName1: z.string().optional(),
   attackDamage1: z.number().min(0).max(999).optional(),
@@ -102,6 +111,7 @@ export function CardGenerator({ onCardGenerated, initialValues }: CardGeneratorP
       backgroundDescription: initialValues?.backgroundDescription || '',
       pokemonDescription: initialValues?.pokemonDescription || '',
       language: initialValues?.language || 'english',
+      model: initialValues?.model || 'imagen-4.0-ultra-generate-001',
       hp: initialValues?.hp || 130,
       attackName1: initialValues?.attackName1 || 'Quick Attack',
       attackDamage1: initialValues?.attackDamage1 || 60,
@@ -251,6 +261,25 @@ export function CardGenerator({ onCardGenerated, initialValues }: CardGeneratorP
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="model">AI Model</Label>
+                <Select onValueChange={(value) => setValue('model', value as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.model && (
+                  <p className="text-sm text-red-500 mt-1">{errors.model.message}</p>
+                )}
               </div>
             </div>
 

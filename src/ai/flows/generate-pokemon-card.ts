@@ -22,6 +22,7 @@ const GeneratePokemonCardInputSchema = z.object({
   backgroundDescription: z.string().min(1, "Background description is required"),
   pokemonDescription: z.string().min(1, "Pokemon description is required"),
   language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
+  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image-preview']).default('imagen-4.0-ultra-generate-001'),
   hp: z.number().optional(),
   attackName1: z.string().optional(),
   attackDamage1: z.number().optional(),
@@ -63,7 +64,7 @@ export async function generatePokemonCard(input: GeneratePokemonCardInput): Prom
     console.log("Generated prompt:", prompt);
 
     const response = await genAI.models.generateImages({
-      model: 'models/imagen-4.0-ultra-generate-preview-06-06',
+      model: `models/${input.model}`,
       prompt: prompt,
       config: {
         numberOfImages: 1,
