@@ -70,6 +70,10 @@ export async function generatePokemonCard(input: GeneratePokemonCardInput): Prom
       // Use generateContentStream for Gemini models
       const config = {
         responseModalities: ['IMAGE', 'TEXT'],
+        imageConfig: {
+          aspectRatio: '3:4',
+          imageSize: '1K',
+        },
       };
       const contents = [
         {
@@ -174,5 +178,6 @@ Below the attacks, the Weakness is ${weakness} (x2), Resistance is ${resistance}
 ${languageInstruction}
 
 The overall style should match official Pokémon TCG card design with proper fonts, layout, and professional quality artwork.
-Make sure the information is displayed clearly.`;
+Make sure the information is displayed clearly.
+The output should just be the card.`;
 }
