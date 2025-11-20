@@ -35,7 +35,7 @@ export interface CardGenerationParams {
   backgroundDescription: string;
   pokemonDescription: string;
   language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
-  model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image-preview';
+  model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
   hp?: number;
   attackName1?: string;
   attackDamage1?: number;

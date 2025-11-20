@@ -22,7 +22,7 @@ const GeneratePokemonCardInputSchema = z.object({
   backgroundDescription: z.string().min(1, "Background description is required"),
   pokemonDescription: z.string().min(1, "Pokemon description is required"),
   language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
-  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image-preview']).default('imagen-4.0-ultra-generate-001'),
+  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image', 'gemini-3-pro-image-preview']).default('imagen-4.0-ultra-generate-001'),
   hp: z.number().optional(),
   attackName1: z.string().optional(),
   attackDamage1: z.number().optional(),
@@ -56,36 +56,85 @@ export async function generatePokemonCard(input: GeneratePokemonCardInput): Prom
     }
 
     const genAI = new GoogleGenAI({
-      apiKey: apiKey,
+       apiKey: apiKey,
     });
 
     // Generate the detailed prompt for the Pokemon card
     const prompt = generateCardPrompt(input);
     console.log("Generated prompt:", prompt);
 
-    const response = await genAI.models.generateImages({
-      model: `models/${input.model}`,
-      prompt: prompt,
-      config: {
-        numberOfImages: 1,
-        outputMimeType: 'image/jpeg',
-        aspectRatio: '3:4' // Pokemon cards are roughly 3:4 aspect ratio
-      },
-    });
+    // Check if using Gemini model (for generateContentStream) or Imagen model (for generateImages)
+    const isGeminiModel = input.model.startsWith('gemini-');
+    
+    if (isGeminiModel) {
+      // Use generateContentStream for Gemini models
+      const config = {
+        responseModalities: ['IMAGE', 'TEXT'],
+      };
+      const contents = [
+        {
+          role: 'user' as const,
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ];
 
-    if (!response?.generatedImages || response.generatedImages.length === 0) {
-      return { error: 'No images generated.' };
+      const response = await genAI.models.generateContentStream({
+        model: input.model,
+        config,
+        contents,
+      });
+
+      let imageBase64: string | undefined;
+      
+      for await (const chunk of response) {
+        if (!chunk.candidates || !chunk.candidates[0].content || !chunk.candidates[0].content.parts) {
+          continue;
+        }
+        if (chunk.candidates?.[0]?.content?.parts?.[0]?.inlineData) {
+          const inlineData = chunk.candidates[0].content.parts[0].inlineData;
+          imageBase64 = inlineData.data || '';
+          break; // We only need the first image
+        }
+      }
+
+      if (!imageBase64) {
+        return { error: 'No image generated from Gemini model.' };
+      }
+
+      return {
+        imageBase64,
+        prompt,
+      };
+    } else {
+      // Use generateImages for Imagen models
+      const response = await genAI.models.generateImages({
+        model: input.model,
+        prompt: prompt,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: '3:4' // Pokemon cards are roughly 3:4 aspect ratio
+        },
+      });
+
+      if (!response?.generatedImages || response.generatedImages.length === 0) {
+        return { error: 'No images generated.' };
+      }
+
+      const generatedImage = response.generatedImages[0];
+      if (!generatedImage?.image?.imageBytes) {
+        return { error: 'Generated image data is missing.' };
+      }
+
+      return {
+        imageBase64: generatedImage.image.imageBytes,
+        prompt: prompt,
+      };
     }
-
-    const generatedImage = response.generatedImages[0];
-    if (!generatedImage?.image?.imageBytes) {
-      return { error: 'Generated image data is missing.' };
-    }
-
-    return {
-      imageBase64: generatedImage.image.imageBytes,
-      prompt: prompt,
-    };
   } catch (error: any) {
     console.error('Error generating Pokemon card:', error);
     return { error: `Failed to generate Pokemon card: ${error?.message || 'Unknown error'}` };

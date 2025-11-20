@@ -26,7 +26,7 @@ export interface GeneratePokemonCardInput {
   backgroundDescription: string;
   pokemonDescription: string;
   language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
-  model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image-preview';
+  model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
   hp?: number;
   attackName1?: string;
   attackDamage1?: number;
@@ -58,7 +58,8 @@ const models = [
   { value: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4.0 Ultra' },
   { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0 Standard' },
   { value: 'imagen-4.0-fast-generate-001', label: 'Imagen 4.0 Fast' },
-  { value: 'gemini-2.5-flash-image-preview', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (Nano Banana)' },
+  { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro (Nano Banana Pro)' },
 ] as const;
 
 const cardGeneratorSchema = z.object({
@@ -69,7 +70,7 @@ const cardGeneratorSchema = z.object({
   backgroundDescription: z.string().min(10, 'Background description must be at least 10 characters'),
   pokemonDescription: z.string().min(10, 'Pokemon description must be at least 10 characters'),
   language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
-  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image-preview']),
+  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image', 'gemini-3-pro-image-preview']),
   hp: z.number().min(10).max(999).optional(),
   attackName1: z.string().optional(),
   attackDamage1: z.number().min(0).max(999).optional(),
