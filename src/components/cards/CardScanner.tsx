@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, type ChangeEvent, useRef } from 'react';
-import { scanPokemonCard, type ScanPokemonCardOutput } from '@/ai/flows/scan-pokemon-card';
+import { scanTCGCard, type ScanTCGCardOutput } from '@/ai/flows/scan-tcg-card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
@@ -18,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 export default function CardScanner() {
   const { hasGeminiKey } = useApiKeys();
   const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanPokemonCardOutput | null>(null);
+  const [scanResult, setScanResult] = useState<ScanTCGCardOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
@@ -56,8 +54,8 @@ export default function CardScanner() {
     }
 
     if (!hasGeminiKey) {
-      setError('Gemini API key is required to scan Pokemon cards. Please configure it in Settings.');
-      toast({ title: 'API Key Required', description: 'Gemini API key is required to scan Pokemon cards. Please configure it in Settings.', variant: 'destructive' });
+      setError('Gemini API key is required to scan trading cards. Please configure it in Settings.');
+      toast({ title: 'API Key Required', description: 'Gemini API key is required to scan trading cards. Please configure it in Settings.', variant: 'destructive' });
       return;
     }
 
@@ -67,9 +65,9 @@ export default function CardScanner() {
     setShowForm(false);
 
     try {
-      const result = await scanPokemonCard({ 
+      const result = await scanTCGCard({ 
         photoDataUri: imageDataUrl,
-        userId: user?.uid 
+        userId: user?.uid || ''
       });
       if (result.error) {
         setError(result.error);
@@ -108,6 +106,7 @@ export default function CardScanner() {
         name: data.name,
         set: data.set,
         rarity: data.rarity,
+        game: scanResult?.cardDetails?.game || 'pokemon', // Include detected game
         imageDataUrl: data.imageDataUrl, // Use image from form state, which should be original scan
       };
       await addCardToCollection(user.uid, cardToSave);
@@ -144,7 +143,7 @@ export default function CardScanner() {
           </div>
           <CardTitle className="text-xl">Upload Card Image</CardTitle>
           <CardDescription>
-            Choose a clear image of your Pokémon card for best scanning results
+            Choose a clear image of your trading card for best scanning results. Supports Pokémon, One Piece, Lorcana, Magic: The Gathering, and Dragon Ball cards.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

@@ -15,7 +15,7 @@ export default function DashboardPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold font-headline mb-2">Welcome to your Cardex Dashboard</h1>
         <p className="text-lg text-muted-foreground">
-          Manage your Pokémon card collection with ease.
+          Manage your TCG card collection with ease.
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export default function DashboardPage() {
               Scan Cards
             </CardTitle>
             <CardDescription>
-              Use your camera to scan and identify Pokemon cards
+              Use your camera to scan and identify TCG cards
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -51,7 +51,7 @@ export default function DashboardPage() {
               Generate Cards
             </CardTitle>
             <CardDescription>
-              Create custom Pokemon cards using AI image generation
+              Create custom TCG cards using AI image generation
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -70,7 +70,7 @@ export default function DashboardPage() {
               Photo Cards
             </CardTitle>
             <CardDescription>
-              Transform your photos into Pokemon cards using AI
+              Transform your photos into TCG cards using AI
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -89,7 +89,7 @@ export default function DashboardPage() {
               My Collection
             </CardTitle>
             <CardDescription>
-              View and manage your Pokemon card collection
+              View and manage your TCG card collection
             </CardDescription>
           </CardHeader>
           <CardContent>

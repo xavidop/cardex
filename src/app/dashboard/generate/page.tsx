@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CardGenerator } from '@/components/cards/CardGenerator';
+import { TCGCardGenerator } from '@/components/cards/TCGCardGenerator';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { addCardToCollection } from '@/lib/firestore';
@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
+import { getGameConfig } from '@/config/tcg-games';
+import type { TCGGame } from '@/types';
 
 export default function GenerateCardPage() {
   const { user } = useAuth();
@@ -56,10 +58,14 @@ export default function GenerateCardPage() {
         }
       }
       
+      const game = generatedCard.params?.game || 'pokemon';
+      const gameName = getGameConfig(game as TCGGame).name;
+      
       await addCardToCollection(user.uid, {
-        name: 'Generated Pokemon Card',
+        name: `Generated ${gameName} Card`,
         set: 'AI Generated',
         rarity: 'Special',
+        game: game,
         imageDataUrl: imageDataUrl,
         isGenerated: true,
         prompt: generatedCard.prompt,
@@ -68,7 +74,7 @@ export default function GenerateCardPage() {
 
       toast({
         title: 'Card Saved',
-        description: 'Your generated Pokemon card has been added to your collection!',
+        description: `Your generated ${gameName} card has been added to your collection!`,
       });
 
       // Clear the generated card after saving
@@ -88,9 +94,9 @@ export default function GenerateCardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Pokemon Card Generator</h1>
+        <h1 className="text-3xl font-bold mb-2">TCG Card Generator</h1>
         <p className="text-muted-foreground">
-          Create your own custom Pokemon cards using AI-powered image generation
+          Create your own custom trading cards for Pokémon, One Piece, Lorcana, Magic, and Dragon Ball using AI
         </p>
       </div>
 
@@ -102,7 +108,7 @@ export default function GenerateCardPage() {
         />
       </div>
 
-      <CardGenerator onCardGenerated={handleCardGenerated} />
+      <TCGCardGenerator onCardGenerated={handleCardGenerated} />
 
       {generatedCard && (
         <Card className="mt-8">

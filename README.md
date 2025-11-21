@@ -1,11 +1,12 @@
-# Cardex - Pokémon Card Collection Manager
+# Cardex - Multi-TCG Card Collection Manager
 
-A modern web application for managing your Pokémon card collection with AI-powered card scanning and identification.
+A modern web application for managing your Trading Card Game (TCG) collection with AI-powered card generation and identification. Now supporting **Pokémon, One Piece, Disney Lorcana, Magic: The Gathering, and Dragon Ball Super**!
 
 ## Features
 
+- 🎮 **Multi-Game Support**: Generate and collect cards from 5 popular TCG games
 - 🤖 **AI Card Scanning**: Use Gemini Vision to automatically identify Pokémon cards from photos
-- ✨ **AI Card Generation**: Create custom Pokémon cards using Google Imagen4
+- ✨ **AI Card Generation**: Create custom cards for any supported TCG using Google Imagen4
 - 🎬 **AI Video Generation**: Bring your cards to life with animated videos using Google Veo 2.0
 - 📸 **Photo-to-Card**: Transform your own photos into Pokemon cards using AI image generation
 - 🔐 **Secure Authentication**: Firebase Authentication with email and Google login
@@ -13,6 +14,18 @@ A modern web application for managing your Pokémon card collection with AI-powe
 - 💾 **Cloud Storage**: Real-time data synchronization with Firestore
 - ✏️ **CRUD Operations**: Create, read, update, and delete cards in your collection
 - 🎯 **Type Safety**: Full TypeScript implementation for better development experience
+
+## Supported Trading Card Games
+
+| Game | Types/Colors | Unique Stats |
+|------|-------------|--------------|
+| 🎮 **Pokémon TCG** | 18 types (Fire, Water, etc.) | HP, Attacks, Weakness, Resistance |
+| 🏴‍☠️ **One Piece Card Game** | 6 colors (Red, Blue, etc.) | Power, Cost, Counter, Life Points |
+| ✨ **Disney Lorcana** | 6 ink colors (Amber, Ruby, etc.) | Ink Cost, Strength, Willpower, Lore |
+| 🔮 **Magic: The Gathering** | 5 colors + Colorless | Mana Cost, Power/Toughness, Card Type |
+| 🐉 **Dragon Ball Super** | 4 colors (Red, Blue, etc.) | Combat Power, Combo Cost, Era |
+
+For detailed information about each game's attributes, see [TCG Attributes Reference](docs/TCG_ATTRIBUTES_REFERENCE.md).
 
 ## Technology Stack
 
@@ -135,14 +148,17 @@ npm run genkit:dev
 
 ### Card Generation
 1. Navigate to the generate page
-2. Fill out the card parameters:
-   - Pokemon name and type
-   - Card properties (Full Art, Holographic)
-   - Descriptions for the Pokemon and background
-   - Language and optional stats
-3. Click "Generate Pokemon Card" to create a custom card using AI
-4. Preview the generated card
-5. Save it to your collection if you like it
+2. **Select your TCG game** (Pokémon, One Piece, Lorcana, Magic, or Dragon Ball)
+3. Fill out the card parameters:
+   - Character name and type/color
+   - Card properties (Special/Full Art, Holographic)
+   - Descriptions for the character and background
+   - Language and game-specific stats
+4. Click "Generate Card" to create a custom card using AI
+5. Preview the generated card
+6. Save it to your collection if you like it
+
+**Note:** Each game has unique stat fields that appear dynamically based on your selection!
 
 ### Photo-to-Card Generation
 1. Navigate to the "Photo Card" page
@@ -182,10 +198,12 @@ Firestore Collection: users/{userId}/pokemon_cards/{cardId}
 ├── name: string
 ├── set: string
 ├── rarity: string
+├── game: TCGGame ('pokemon' | 'onepiece' | 'lorcana' | 'magic' | 'dragonball')
 ├── imageUrl: string (Firebase Storage URL)
 ├── videoUrl?: string (Firebase Storage URL for animated video)
 ├── videoGenerationStatus?: 'generating' | 'completed' | 'failed'
 ├── videoPrompt?: string (AI prompt used for video generation)
+├── generationParams?: CardGenerationParams (game-specific stats and settings)
 ├── userId: string
 ├── createdAt: timestamp
 └── updatedAt: timestamp

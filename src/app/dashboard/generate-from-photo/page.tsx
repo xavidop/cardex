@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { PhotoCardGenerator } from '@/components/cards/PhotoCardGenerator';
+import { PhotoCardGeneratorFormOnly as PhotoCardGenerator } from '@/components/cards/PhotoCardGeneratorFormOnly';
 import { addCardToCollection } from '@/lib/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { Loader2, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
+import { getGameConfig } from '@/config/tcg-games';
+import type { TCGGame } from '@/types';
 
 export default function GenerateFromPhotoPage() {
   const { user } = useAuth();
@@ -57,13 +59,17 @@ export default function GenerateFromPhotoPage() {
         }
       }
       
+      const game = generatedCard.params?.game || 'pokemon';
+      const gameName = getGameConfig(game as TCGGame).name;
+      
       // Exclude photoDataUri from params when saving to Firestore (too large for document storage)
       const { photoDataUri, ...paramsWithoutPhoto } = generatedCard.params;
       
       await addCardToCollection(user.uid, {
-        name: 'Photo-Generated Pokemon Card',
+        name: `Photo-Generated ${gameName} Card`,
         set: 'AI Photo Generated',
         rarity: 'Photo Special',
+        game: game,
         imageDataUrl: finalImageDataUrl,
         isGenerated: true,
         isPhotoGenerated: true,
@@ -73,7 +79,7 @@ export default function GenerateFromPhotoPage() {
 
       toast({
         title: 'Card Saved',
-        description: 'Your photo-generated Pokemon card has been added to your collection!',
+        description: `Your photo-generated ${gameName} card has been added to your collection!`,
       });
 
       // Clear the generated card after saving
@@ -94,9 +100,12 @@ export default function GenerateFromPhotoPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Pokemon Card Generator from Photo</h1>
+        <h1 className="text-3xl font-bold mb-2">TCG Card Generator from Photo</h1>
         <p className="text-muted-foreground">
-          Upload your own photo and transform it into a custom Pokemon card using AI-powered image generation
+          Upload your own photo and transform it into a custom trading card using AI-powered image generation
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Supports Pokémon, One Piece, Lorcana, Magic: The Gathering, and Dragon Ball cards
         </p>
       </div>
 
@@ -115,7 +124,7 @@ export default function GenerateFromPhotoPage() {
           <CardHeader>
             <CardTitle>Save Your Card</CardTitle>
             <CardDescription>
-              Your photo-inspired Pokemon card is ready! Save it to your collection.
+              Your photo-inspired trading card is ready! Save it to your collection.
             </CardDescription>
           </CardHeader>
           <CardContent>

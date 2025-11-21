@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { CardGeneratorFormOnly } from '@/components/cards/CardGeneratorFormOnly';
+import { TCGCardGenerator } from '@/components/cards/TCGCardGenerator';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { addCardToCollection } from '@/lib/firestore';
@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import { parseGenerationParams } from '@/utils/generationParamsUtils';
-import type { GeneratePokemonCardInput } from '@/components/cards/CardGeneratorFormOnly';
+import { getGameConfig } from '@/config/tcg-games';
+import type { TCGGame, CardGenerationParams } from '@/types';
 import Image from 'next/image';
 
 export default function EditGenerateCardPage() {
@@ -20,13 +21,19 @@ export default function EditGenerateCardPage() {
   const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string; params?: any } | null>(null);
   const [originalCard, setOriginalCard] = useState<{ id: string; name: string; imageUrl: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [initialValues, setInitialValues] = useState<Partial<GeneratePokemonCardInput> | undefined>(undefined);
+  const [initialValues, setInitialValues] = useState<Partial<CardGenerationParams> | undefined>(undefined);
   const [showComparison, setShowComparison] = useState(true);
+  const [currentGame, setCurrentGame] = useState<TCGGame>('pokemon');
 
   useEffect(() => {
     // Parse parameters from URL search params
     const params = parseGenerationParams(searchParams);
     setInitialValues(params);
+    
+    // Set the game from params
+    if (params.game) {
+      setCurrentGame(params.game as TCGGame);
+    }
     
     // Extract original card data
     const originalCardId = searchParams.get('originalCardId');
@@ -82,10 +89,14 @@ export default function EditGenerateCardPage() {
         }
       }
       
+      const game = generatedCard.params?.game || currentGame;
+      const gameName = getGameConfig(game as TCGGame).name;
+      
       await addCardToCollection(user.uid, {
-        name: 'Generated Pokemon Card',
+        name: `Generated ${gameName} Card`,
         set: 'AI Generated',
         rarity: 'Special',
+        game: game,
         imageDataUrl: imageDataUrl,
         isGenerated: true,
         prompt: generatedCard.prompt,
@@ -94,7 +105,7 @@ export default function EditGenerateCardPage() {
 
       toast({
         title: 'Card Saved',
-        description: 'Your generated Pokemon card has been added to your collection!',
+        description: `Your generated ${gameName} card has been added to your collection!`,
       });
 
       // Clear the generated card after saving
@@ -118,16 +129,16 @@ export default function EditGenerateCardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Edit Pokemon Card Generator</h1>
+        <h1 className="text-3xl font-bold mb-2">Edit {getGameConfig(currentGame).name} Card Generator</h1>
         <p className="text-muted-foreground">
-          Modify your Pokemon card parameters and regenerate the card
+          Modify your {getGameConfig(currentGame).name} card parameters and regenerate the card
         </p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Form Section - Takes up 2 columns */}
         <div className="xl:col-span-2">
-          <CardGeneratorFormOnly onCardGenerated={handleCardGenerated} initialValues={initialValues} />
+          <TCGCardGenerator onCardGenerated={handleCardGenerated} initialValues={initialValues} />
         </div>
 
         {/* Card Preview Section - Takes up 1 column */}

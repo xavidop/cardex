@@ -1,5 +1,8 @@
 import type { Timestamp } from 'firebase/firestore';
 
+// Supported TCG games
+export type TCGGame = 'pokemon' | 'onepiece' | 'lorcana' | 'magic' | 'dragonball';
+
 export interface PokemonCard {
   id: string; // Firestore document ID
   userId: string;
@@ -9,6 +12,7 @@ export interface PokemonCard {
   imageUrl: string; // Firebase Storage URL of the card image (NOT raw image data)
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  game: TCGGame; // The TCG game this card belongs to
   isGenerated?: boolean; // Flag to indicate if this is an AI-generated card
   isPhotoGenerated?: boolean; // Flag to indicate if this is generated from a photo
   prompt?: string; // The prompt used to generate the card (for generated cards)
@@ -28,14 +32,19 @@ export interface ScannedCardData {
 
 // For Pokemon card generation parameters
 export interface CardGenerationParams {
-  pokemonName: string;
-  pokemonType: string;
-  isIllustrationRare: boolean;
-  isHolo: boolean;
+  game: TCGGame;
+  // Common fields across all games
+  characterName: string; // Name of the character/creature
+  characterType: string; // Type/Element/Color of the card
+  isSpecialArt: boolean; // Special/Full Art variant
+  isHolo: boolean; // Holographic effect
   backgroundDescription: string;
-  pokemonDescription: string;
+  characterDescription: string;
   language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
   model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+  
+  // Game-specific fields (optional, used based on game type)
+  // Pokemon
   hp?: number;
   attackName1?: string;
   attackDamage1?: number;
@@ -44,6 +53,32 @@ export interface CardGenerationParams {
   weakness?: string;
   resistance?: string;
   retreatCost?: number;
+  
+  // One Piece
+  power?: number;
+  cost?: number;
+  counter?: number;
+  color?: string;
+  lifePoints?: number;
+  
+  // Lorcana
+  inkCost?: number;
+  strength?: number;
+  willpower?: number;
+  lore?: number;
+  inkable?: boolean;
+  
+  // Magic: The Gathering
+  manaCost?: string;
+  cardType?: string; // Creature, Instant, Sorcery, etc.
+  subType?: string;
+  powerToughness?: string; // e.g., "3/3"
+  
+  // Dragon Ball
+  combatPower?: number;
+  comboCost?: number;
+  comboEnergy?: number;
+  era?: string;
 }
 
 export interface GeneratedCard {
@@ -69,11 +104,14 @@ export interface UserApiKeys {
 
 // For Pokemon card generation from photo parameters
 export interface PhotoCardGenerationParams {
+  game: TCGGame;
   photoDataUri?: string; // Optional - not saved to Firestore (too large), only used during generation
-  pokemonName: string;
-  pokemonType: string;
+  characterName: string;
+  characterType: string;
   styleDescription: string;
   language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
+  
+  // Game-specific optional stats (similar to CardGenerationParams)
   hp?: number;
   attackName1?: string;
   attackDamage1?: number;
@@ -82,4 +120,22 @@ export interface PhotoCardGenerationParams {
   weakness?: string;
   resistance?: string;
   retreatCost?: number;
+  power?: number;
+  cost?: number;
+  counter?: number;
+  color?: string;
+  lifePoints?: number;
+  inkCost?: number;
+  strength?: number;
+  willpower?: number;
+  lore?: number;
+  inkable?: boolean;
+  manaCost?: string;
+  cardType?: string;
+  subType?: string;
+  powerToughness?: string;
+  combatPower?: number;
+  comboCost?: number;
+  comboEnergy?: number;
+  era?: string;
 }

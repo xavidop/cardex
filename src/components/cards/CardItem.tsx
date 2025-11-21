@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, Sparkles, Download, Play, Pause, Video, Clock, AlertCircle, RotateCcw, FileDown, Eye, Settings } from 'lucide-react';
-import type { PokemonCard } from '@/types';
+import type { PokemonCard, TCGGame } from '@/types';
 import { downloadCardImage, downloadCardVideo } from '@/utils/downloadUtils';
 import { useToast } from '@/hooks/use-toast';
 import ShareButton from '@/components/ui/share-button';
 import { useState } from 'react';
 import { generateVideoForExistingCard } from '@/lib/firestore';
 import { useApiKeys } from '@/hooks/useApiKeys';
+import { getGameConfig } from '@/config/tcg-games';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -173,6 +174,10 @@ export default function CardItem({ card, onDelete, onUpdate, isDeleting }: CardI
             {card.name}
           </CardTitle>
           <div className="flex flex-col gap-1 flex-shrink-0">
+            {/* Game Badge */}
+            <Badge variant="outline" className="flex items-center gap-1">
+              {getGameConfig(card.game || 'pokemon' as TCGGame).name}
+            </Badge>
             {card.isGenerated && (
               <Badge variant="secondary" className="flex items-center gap-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200">
                 <Sparkles className="h-3 w-3" />

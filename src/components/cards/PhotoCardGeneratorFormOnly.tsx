@@ -11,32 +11,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Download } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
+import { downloadCardFromBase64 } from '@/utils/downloadUtils';
 import { useAuth } from '@/hooks/useAuth';
-
-export interface GenerateFromPhotoInput {
-  photoDataUri: string;
-  pokemonName: string;
-  pokemonType: string;
-  styleDescription: string;
-  language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
-  hp?: number;
-  attackName1?: string;
-  attackDamage1?: number;
-  attackName2?: string;
-  attackDamage2?: number;
-  weakness?: string;
-  resistance?: string;
-  retreatCost?: number;
-}
-
-const pokemonTypes = [
-  'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting', 'Poison',
-  'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 
-  'Steel', 'Fairy'
-];
+import { useApiKeys } from '@/hooks/useApiKeys';
+import { TCG_GAMES, getGameConfig } from '@/config/tcg-games';
+import type { TCGGame, PhotoCardGenerationParams } from '@/types';
 
 const languages = [
   { value: 'english', label: 'English' },
@@ -51,21 +34,33 @@ const languages = [
 
 const photoCardGeneratorSchema = z.object({
   photoDataUri: z.string().min(1, "Photo is required"),
-  pokemonName: z.string().min(1, 'Pokemon name is required'),
-  pokemonType: z.string().min(1, 'Pokemon type is required'),
+  game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']),
+  characterName: z.string().min(1, 'Character name is required'),
+  characterType: z.string().min(1, 'Character type is required'),
   styleDescription: z.string().min(10, 'Style description must be at least 10 characters'),
   language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
-  hp: z.number().min(10).max(999).optional(),
+  // All game-specific stats are optional and dynamic - use preprocess to handle empty strings and NaN
+  hp: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(10).max(9999).optional()),
+  attack: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(9999).optional()),
+  defense: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(9999).optional()),
+  power: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(9999).optional()),
+  toughness: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(9999).optional()),
+  loyalty: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(99).optional()),
+  energy: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(999).optional()),
+  cost: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(99).optional()),
+  manaCost: z.string().optional(),
   attackName1: z.string().optional(),
-  attackDamage1: z.number().min(0).max(999).optional(),
+  attackDamage1: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(999).optional()),
   attackName2: z.string().optional(),
-  attackDamage2: z.number().min(0).max(999).optional(),
+  attackDamage2: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(999).optional()),
   weakness: z.string().optional(),
   resistance: z.string().optional(),
-  retreatCost: z.number().min(0).max(5).optional(),
+  retreatCost: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(5).optional()),
 });
 
 type PhotoCardGeneratorForm = z.infer<typeof photoCardGeneratorSchema>;
+
+export type GenerateFromPhotoInput = PhotoCardGenerationParams & { photoDataUri: string };
 
 interface PhotoCardGeneratorFormOnlyProps {
   onCardGenerated?: (imageBase64: string, prompt: string, params: GenerateFromPhotoInput) => void;
@@ -74,7 +69,9 @@ interface PhotoCardGeneratorFormOnlyProps {
 
 export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: PhotoCardGeneratorFormOnlyProps) {
   const { user } = useAuth();
+  const { hasOpenAIKey } = useApiKeys();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string } | null>(null);
   const [error, setError] = useState<string>('');
   const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.photoDataUri || null);
   const { toast } = useToast();
@@ -91,22 +88,63 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
     resolver: zodResolver(photoCardGeneratorSchema),
     defaultValues: {
       photoDataUri: initialValues?.photoDataUri || '',
-      pokemonName: initialValues?.pokemonName || '',
-      pokemonType: initialValues?.pokemonType || '',
+      game: initialValues?.game || 'pokemon',
+      characterName: initialValues?.characterName || '',
+      characterType: initialValues?.characterType || '',
       styleDescription: initialValues?.styleDescription || '',
       language: initialValues?.language || 'english',
-      hp: initialValues?.hp || 130,
-      attackName1: initialValues?.attackName1 || 'Quick Attack',
-      attackDamage1: initialValues?.attackDamage1 || 60,
-      attackName2: initialValues?.attackName2 || 'Special Move',
-      attackDamage2: initialValues?.attackDamage2 || 90,
-      weakness: initialValues?.weakness || 'Fighting',
-      resistance: initialValues?.resistance || 'Psychic',
-      retreatCost: initialValues?.retreatCost || 2,
+      hp: initialValues?.hp,
+      attackName1: initialValues?.attackName1 || '',
+      attackDamage1: initialValues?.attackDamage1,
+      attackName2: initialValues?.attackName2 || '',
+      attackDamage2: initialValues?.attackDamage2,
+      weakness: initialValues?.weakness || '',
+      resistance: initialValues?.resistance || '',
+      retreatCost: initialValues?.retreatCost,
     },
   });
 
   const watchedValues = watch();
+  const currentGame = watchedValues.game || 'pokemon';
+  const gameConfig = getGameConfig(currentGame);
+
+  const handleGameChange = (game: TCGGame) => {
+    setValue('game', game, { shouldValidate: true });
+    const config = getGameConfig(game);
+    
+    // Reset character type
+    setValue('characterType', '', { shouldValidate: false });
+    
+    // Set default stats for the game
+    const defaultStats = config.defaultStats;
+    if (defaultStats) {
+      Object.entries(defaultStats).forEach(([key, value]) => {
+        setValue(key as any, value as any);
+      });
+    }
+  };
+
+  const handleDownloadCard = () => {
+    if (!generatedCard) return;
+    
+    try {
+      const filename = watchedValues.characterName 
+        ? `${watchedValues.characterName.toLowerCase().replace(/\s+/g, '_')}_${currentGame}_card`
+        : `${currentGame}_card`;
+      downloadCardFromBase64(generatedCard.imageBase64, filename);
+      toast({
+        title: 'Download Started',
+        description: `Your ${gameConfig.name} card is being downloaded.`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download the card. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -139,13 +177,31 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
   };
 
   const onSubmit = async (data: PhotoCardGeneratorForm) => {
+    console.log('Form submitted with data:', data);
+    console.log('Has user:', !!user, 'Has OpenAI key:', hasOpenAIKey);
+    
     if (!user) {
       setError('You must be logged in to generate cards');
       return;
     }
 
+    if (!hasOpenAIKey) {
+      setError('OpenAI API key is required to generate cards from photos. Please configure it in Settings.');
+      return;
+    }
+
+    if (!data.photoDataUri) {
+      toast({
+        title: 'Photo Required',
+        description: 'Please upload a reference photo first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsGenerating(true);
     setError('');
+    setGeneratedCard(null);
 
     try {
       const response = await fetch('/api/generate-card-from-photo', {
@@ -172,10 +228,14 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
       }
 
       if (result.imageBase64 && result.prompt) {
+        setGeneratedCard({
+          imageBase64: result.imageBase64,
+          prompt: result.prompt,
+        });
         onCardGenerated?.(result.imageBase64, result.prompt, data);
         toast({
           title: 'Card Generated!',
-          description: 'Your Pokemon card has been generated based on your photo.',
+          description: `Your ${gameConfig.name} card has been generated based on your photo.`,
         });
       }
     } catch (err) {
@@ -187,15 +247,32 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Pokemon Card from Photo</CardTitle>
-        <CardDescription>
-          Upload your photo and customize the Pokemon card details
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Form Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Generate Card from Photo</CardTitle>
+          <CardDescription>
+            Upload a photo and create a custom TCG card inspired by your image using AI
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+        <form onSubmit={handleSubmit(onSubmit, (errors) => {
+          console.log('Form validation errors:', errors);
+          
+          // Build a detailed error message
+          const errorFields = Object.entries(errors).map(([field, error]) => {
+            return `${field}: ${error?.message || 'Invalid value'}`;
+          }).join(', ');
+          
+          console.log('Detailed errors:', errorFields);
+          
+          toast({
+            title: 'Validation Error',
+            description: errorFields || 'Please check all required fields and try again.',
+            variant: 'destructive',
+          });
+        })} className="space-y-6">
           {/* Photo Upload */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Upload Photo</h3>
@@ -253,46 +330,73 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
 
           <Separator />
 
+          {/* Game Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              Game Selection
+              <Badge variant="outline">{gameConfig.name}</Badge>
+            </h3>
+            
+            <div>
+              <Label htmlFor="game">Trading Card Game</Label>
+              <Select value={currentGame} onValueChange={(value) => handleGameChange(value as TCGGame)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select game" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TCG_GAMES).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      {config.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Basic Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Basic Information</h3>
+            <h3 className="text-lg font-semibold">Character Information</h3>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="pokemonName">Pokemon Name</Label>
+                <Label htmlFor="characterName">Character Name <span className="text-red-500">*</span></Label>
                 <Input
-                  id="pokemonName"
-                  {...register('pokemonName')}
-                  placeholder="e.g., Pikachu"
+                  id="characterName"
+                  {...register('characterName')}
+                  placeholder={`e.g., ${gameConfig.name} Character`}
+                  className={errors.characterName ? 'border-red-500' : ''}
                 />
-                {errors.pokemonName && (
-                  <p className="text-sm text-red-500 mt-1">{errors.pokemonName.message}</p>
+                {errors.characterName && (
+                  <p className="text-sm text-red-500 mt-1">{errors.characterName.message}</p>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="pokemonType">Pokemon Type</Label>
-                <Select value={watchedValues.pokemonType} onValueChange={(value) => setValue('pokemonType', value)}>
-                  <SelectTrigger>
+                <Label htmlFor="characterType">Character Type <span className="text-red-500">*</span></Label>
+                <Select value={watchedValues.characterType || ''} onValueChange={(value) => setValue('characterType', value, { shouldValidate: true })}>
+                  <SelectTrigger className={errors.characterType ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pokemonTypes.map((type) => (
+                    {gameConfig.types.map((type) => (
                       <SelectItem key={type} value={type}>
                         {type}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.pokemonType && (
-                  <p className="text-sm text-red-500 mt-1">{errors.pokemonType.message}</p>
+                {errors.characterType && (
+                  <p className="text-sm text-red-500 mt-1">{errors.characterType.message}</p>
                 )}
               </div>
             </div>
 
             <div>
               <Label htmlFor="language">Card Language</Label>
-              <Select value={watchedValues.language} onValueChange={(value: any) => setValue('language', value)}>
+              <Select value={watchedValues.language || 'english'} onValueChange={(value: any) => setValue('language', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
@@ -314,12 +418,12 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
             <h3 className="text-lg font-semibold">Style & Description</h3>
             
             <div>
-              <Label htmlFor="styleDescription">Style Description</Label>
+              <Label htmlFor="styleDescription">Style Description <span className="text-red-500">*</span></Label>
               <Textarea
                 id="styleDescription"
                 {...register('styleDescription')}
-                placeholder="Describe how you want the Pokemon card to look, the art style, background, etc..."
-                className="min-h-[100px]"
+                placeholder={`Describe how the photo should be adapted for the ${gameConfig.name} card (e.g., 'Use the lighting and composition, but transform the subject into a character in a fantasy setting')`}
+                className={`min-h-[100px] ${errors.styleDescription ? 'border-red-500' : ''}`}
               />
               {errors.styleDescription && (
                 <p className="text-sm text-red-500 mt-1">{errors.styleDescription.message}</p>
@@ -329,103 +433,57 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
 
           <Separator />
 
-          {/* Game Stats */}
+          {/* Dynamic Game Stats */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Game Stats (Optional)</h3>
+            <h3 className="text-lg font-semibold">Card Stats (Optional)</h3>
             
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="hp">HP</Label>
-                <Input
-                  id="hp"
-                  type="number"
-                  {...register('hp', { valueAsNumber: true })}
-                  min="10"
-                  max="999"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="retreatCost">Retreat Cost</Label>
-                <Input
-                  id="retreatCost"
-                  type="number"
-                  {...register('retreatCost', { valueAsNumber: true })}
-                  min="0"
-                  max="5"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Attack 1</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  {...register('attackName1')}
-                  placeholder="Attack name"
-                />
-                <Input
-                  type="number"
-                  {...register('attackDamage1', { valueAsNumber: true })}
-                  placeholder="Damage"
-                  min="0"
-                  max="999"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Attack 2</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  {...register('attackName2')}
-                  placeholder="Attack name"
-                />
-                <Input
-                  type="number"
-                  {...register('attackDamage2', { valueAsNumber: true })}
-                  placeholder="Damage"
-                  min="0"
-                  max="999"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="weakness">Weakness</Label>
-                <Input
-                  id="weakness"
-                  {...register('weakness')}
-                  placeholder="e.g., Fighting"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="resistance">Resistance</Label>
-                <Input
-                  id="resistance"
-                  {...register('resistance')}
-                  placeholder="e.g., Psychic"
-                />
-              </div>
+              {gameConfig.statFields.map((field) => (
+                <div key={field.name}>
+                  <Label htmlFor={field.name}>{field.label}</Label>
+                  {field.type === 'string' ? (
+                    <Input
+                      id={field.name}
+                      {...register(field.name as any)}
+                      placeholder={field.placeholder || field.label}
+                    />
+                  ) : (
+                    <Input
+                      id={field.name}
+                      type="number"
+                      {...register(field.name as any, { valueAsNumber: true })}
+                      placeholder={field.placeholder || field.label}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isGenerating || !imagePreview}
+            disabled={isGenerating || !imagePreview || !hasOpenAIKey}
           >
             {isGenerating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Card...
+                Generating Card from Photo...
               </>
+            ) : !hasOpenAIKey ? (
+              'OpenAI API Key Required'
             ) : (
-              'Generate Pokemon Card from Photo'
+              `Generate ${gameConfig.name} Card from Photo`
             )}
           </Button>
+
+          {!hasOpenAIKey && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-700">
+                Please configure your OpenAI API key in <strong>Settings</strong> to generate cards from photos.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-md bg-red-50 p-4">
@@ -435,5 +493,51 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
         </form>
       </CardContent>
     </Card>
+
+    {/* Preview Section */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Generated Card</CardTitle>
+        <CardDescription>
+          Your photo-inspired {gameConfig.name} card will appear here
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {generatedCard ? (
+          <div className="space-y-4">
+            <div className="relative bg-gray-100 rounded-lg p-4">
+              <img
+                src={`data:image/jpeg;base64,${generatedCard.imageBase64}`}
+                alt={`Generated ${gameConfig.name} Card from Photo`}
+                className="w-full h-auto rounded-lg shadow-lg"
+              />
+            </div>
+            <Button 
+              onClick={handleDownloadCard}
+              className="w-full"
+              variant="outline"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Card
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 bg-gray-50 rounded-lg">
+            {!imagePreview && (
+              <Upload className="h-12 w-12 text-gray-400 mb-4" />
+            )}
+            <p className="text-muted-foreground text-center">
+              {isGenerating 
+                ? `Generating your ${gameConfig.name} card from photo...` 
+                : !imagePreview 
+                  ? 'Upload a reference photo and fill out the form to generate a card'
+                  : 'Fill out the form to generate a card based on your photo'
+              }
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  </div>
   );
 }

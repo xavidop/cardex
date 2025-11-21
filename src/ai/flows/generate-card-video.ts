@@ -80,7 +80,7 @@ export async function generateCardVideo(input: GenerateCardVideoInput): Promise<
     // Start video generation operation
     console.log('Starting Veo video generation...');
     let operation = await ai.models.generateVideos({
-      model: 'veo-3.0-generate-preview',
+      model: 'veo-3.1-generate-preview',
       prompt: animationPrompt,
       image: {
         mimeType: mimeType,

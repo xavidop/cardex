@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generatePokemonCard } from '@/ai/flows/generate-pokemon-card';
+import { generateTCGCard } from '@/ai/flows/generate-tcg-card';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Validate required fields - including userId
-    const requiredFields = ['userId', 'pokemonName', 'pokemonType', 'backgroundDescription', 'pokemonDescription'];
+    // New multi-game flow
+    const requiredFields = ['userId', 'game', 'characterName', 'characterType', 'backgroundDescription', 'characterDescription'];
     const missingFields = requiredFields.filter(field => !body[field]);
     
     if (missingFields.length > 0) {
@@ -16,14 +16,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call the AI flow
-    const result = await generatePokemonCard(body);
+    // Call the new AI flow
+    const result = await generateTCGCard(body);
 
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
     return NextResponse.json(result);
+
   } catch (error) {
     console.error('API route error:', error);
     return NextResponse.json(
@@ -32,3 +33,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

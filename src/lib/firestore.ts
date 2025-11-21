@@ -126,6 +126,7 @@ export const addCardToCollection = async (
   console.log("DEBUG: Attempting to add card with userId:", userId);
   console.log("DEBUG: Current auth user:", auth.currentUser?.uid);
   console.log("DEBUG: Auth user matches:", auth.currentUser?.uid === userId);
+  console.log("DEBUG: Card game:", cardData.game || 'pokemon'); // Default to pokemon for backward compatibility
   
   try {
     // First, upload the image to Firebase Storage
@@ -136,6 +137,7 @@ export const addCardToCollection = async (
     const { imageDataUrl, ...cardDataWithoutImage } = cardData;
     const docPayload = {
       ...cardDataWithoutImage,
+      game: cardData.game || 'pokemon', // Default to pokemon for backward compatibility
       imageUrl, // Store the Firebase Storage URL instead of base64 data
       userId,
       // Don't initialize video generation automatically - make it opt-in
@@ -149,7 +151,9 @@ export const addCardToCollection = async (
       "Payload keys:",
       Object.keys(docPayload).join(', '),
       "Image URL:",
-      imageUrl
+      imageUrl,
+      "Game:",
+      docPayload.game
     );
 
     const docRef = await addDoc(collectionRef, docPayload);

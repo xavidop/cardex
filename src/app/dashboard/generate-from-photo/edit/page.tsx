@@ -12,7 +12,9 @@ import { Loader2, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import { parsePhotoGenerationParams } from '@/utils/generationParamsUtils';
+import { getGameConfig } from '@/config/tcg-games';
 import type { GenerateFromPhotoInput } from '@/components/cards/PhotoCardGeneratorFormOnly';
+import type { TCGGame } from '@/types';
 import Image from 'next/image';
 
 export default function EditGenerateFromPhotoPage() {
@@ -25,11 +27,17 @@ export default function EditGenerateFromPhotoPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [initialValues, setInitialValues] = useState<Partial<GenerateFromPhotoInput> | undefined>(undefined);
   const [showComparison, setShowComparison] = useState(true);
+  const [currentGame, setCurrentGame] = useState<TCGGame>('pokemon');
 
   useEffect(() => {
     // Parse parameters from URL search params
     const params = parsePhotoGenerationParams(searchParams);
     setInitialValues(params);
+    
+    // Set the game from params
+    if (params.game) {
+      setCurrentGame(params.game as TCGGame);
+    }
     
     // Extract original card data
     const originalCardId = searchParams.get('originalCardId');
@@ -83,13 +91,17 @@ export default function EditGenerateFromPhotoPage() {
         }
       }
       
+      const game = generatedCard.params?.game || currentGame;
+      const gameName = getGameConfig(game as TCGGame).name;
+      
       // Exclude photoDataUri from params when saving to Firestore (too large for document storage)
       const { photoDataUri, ...paramsWithoutPhoto } = generatedCard.params;
       
       await addCardToCollection(user.uid, {
-        name: 'Photo-Generated Pokemon Card',
+        name: `Photo-Generated ${gameName} Card`,
         set: 'AI Photo Generated',
         rarity: 'Photo Special',
+        game: game,
         imageDataUrl: finalImageDataUrl,
         isGenerated: true,
         isPhotoGenerated: true,
@@ -99,7 +111,7 @@ export default function EditGenerateFromPhotoPage() {
 
       toast({
         title: 'Card Saved',
-        description: 'Your photo-generated Pokemon card has been added to your collection!',
+        description: `Your photo-generated ${gameName} card has been added to your collection!`,
       });
 
       // Clear the generated card after saving
@@ -124,9 +136,9 @@ export default function EditGenerateFromPhotoPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Edit Pokemon Card Generator from Photo</h1>
+        <h1 className="text-3xl font-bold mb-2">Edit {getGameConfig(currentGame).name} Card Generator from Photo</h1>
         <p className="text-muted-foreground">
-          Modify your photo-based Pokemon card parameters and regenerate the card
+          Modify your photo-based {getGameConfig(currentGame).name} card parameters and regenerate the card
         </p>
       </div>
 
