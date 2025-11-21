@@ -14,10 +14,11 @@ import OpenAI from 'openai';
 import { getUserApiKeys } from '@/lib/firestore';
 import { getGameConfig } from '@/config/tcg-games';
 import type { TCGGame } from '@/types';
+import { tcgGameSchema, languageSchema } from '@/constants';
 
 const GenerateFromPhotoInputSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']),
+  game: tcgGameSchema,
   photoDataUri: z
     .string()
     .describe(
@@ -26,7 +27,7 @@ const GenerateFromPhotoInputSchema = z.object({
   characterName: z.string().min(1, "Character name is required"),
   characterType: z.string().min(1, "Character type is required"),
   styleDescription: z.string().min(10, "Style description is required - describe how to adapt the photo"),
-  language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']).default('english'),
+  language: languageSchema.default('english'),
   
   // Game-specific stats (all optional)
   hp: z.number().optional(),

@@ -12,6 +12,7 @@
 import {ai, createUserAI} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { TCGGame } from '@/types';
+import { tcgGameSchema } from '@/constants';
 
 const ScanTCGCardInputSchema = z.object({
   photoDataUri: z
@@ -20,7 +21,7 @@ const ScanTCGCardInputSchema = z.object({
       "A photo of a trading card, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   userId: z.string().describe("The user ID for personalized API key usage.").optional(),
-  game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']).optional().describe("The TCG game to scan for. If not specified, will auto-detect."),
+  game: tcgGameSchema.optional().describe("The TCG game to scan for. If not specified, will auto-detect."),
 });
 export type ScanTCGCardInput = z.infer<typeof ScanTCGCardInputSchema>;
 
@@ -29,7 +30,7 @@ const ScanTCGCardOutputSchema = z.object({
     name: z.string().describe("The name of the card.").optional(),
     set: z.string().describe("The set the card belongs to.").optional(),
     rarity: z.string().describe("The rarity of the card.").optional(),
-    game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']).describe("The TCG game this card is from.").optional(),
+    game: tcgGameSchema.describe("The TCG game this card is from.").optional(),
   }).describe("Details about the trading card.").optional(),
   error: z.string().describe("Error message if the card could not be identified.").optional()
 });

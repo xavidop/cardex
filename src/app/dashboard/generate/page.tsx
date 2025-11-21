@@ -10,12 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 import { getGameConfig } from '@/config/tcg-games';
-import type { TCGGame } from '@/types';
+import type { TCGGame, GeneratedCard, CardGenerationParams } from '@/types';
 
 export default function GenerateCardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string; params?: any } | null>(null);
+  const [generatedCard, setGeneratedCard] = useState<(GeneratedCard & { params?: CardGenerationParams }) | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleCardGenerated = (imageBase64: string, prompt: string, params: any) => {

@@ -14,7 +14,7 @@ import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUt
 import { parsePhotoGenerationParams } from '@/utils/generationParamsUtils';
 import { getGameConfig } from '@/config/tcg-games';
 import type { GenerateFromPhotoInput } from '@/components/cards/PhotoCardGeneratorFormOnly';
-import type { TCGGame } from '@/types';
+import type { TCGGame, PhotoCardGenerationParams, GeneratedCard } from '@/types';
 import Image from 'next/image';
 
 export default function EditGenerateFromPhotoPage() {
@@ -22,7 +22,7 @@ export default function EditGenerateFromPhotoPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string; params?: any } | null>(null);
+  const [generatedCard, setGeneratedCard] = useState<(GeneratedCard & { params?: GenerateFromPhotoInput }) | null>(null);
   const [originalCard, setOriginalCard] = useState<{ id: string; name: string; imageUrl: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [initialValues, setInitialValues] = useState<Partial<GenerateFromPhotoInput> | undefined>(undefined);
@@ -95,7 +95,7 @@ export default function EditGenerateFromPhotoPage() {
       const gameName = getGameConfig(game as TCGGame).name;
       
       // Exclude photoDataUri from params when saving to Firestore (too large for document storage)
-      const { photoDataUri, ...paramsWithoutPhoto } = generatedCard.params;
+      const { photoDataUri, ...paramsWithoutPhoto } = generatedCard.params || {};
       
       await addCardToCollection(user.uid, {
         name: `Photo-Generated ${gameName} Card`,
@@ -106,7 +106,7 @@ export default function EditGenerateFromPhotoPage() {
         isGenerated: true,
         isPhotoGenerated: true,
         prompt: generatedCard.prompt,
-        photoGenerationParams: paramsWithoutPhoto,
+        photoGenerationParams: paramsWithoutPhoto as PhotoCardGenerationParams,
       });
 
       toast({

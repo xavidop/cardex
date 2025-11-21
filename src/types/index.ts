@@ -1,7 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { TCGGame, Language, AIModel } from '@/constants';
 
-// Supported TCG games
-export type TCGGame = 'pokemon' | 'onepiece' | 'lorcana' | 'magic' | 'dragonball';
+export type { TCGGame } from '@/constants';
 
 export interface PokemonCard {
   id: string; // Firestore document ID
@@ -40,8 +40,8 @@ export interface CardGenerationParams {
   isHolo: boolean; // Holographic effect
   backgroundDescription: string;
   characterDescription: string;
-  language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
-  model: 'imagen-4.0-ultra-generate-001' | 'imagen-4.0-generate-001' | 'imagen-4.0-fast-generate-001' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+  language: Language;
+  model: AIModel;
   
   // Game-specific fields (optional, used based on game type)
   // Pokemon
@@ -109,7 +109,7 @@ export interface PhotoCardGenerationParams {
   characterName: string;
   characterType: string;
   styleDescription: string;
-  language: 'english' | 'japanese' | 'chinese' | 'korean' | 'spanish' | 'french' | 'german' | 'italian';
+  language: Language;
   
   // Game-specific optional stats (similar to CardGenerationParams)
   hp?: number;

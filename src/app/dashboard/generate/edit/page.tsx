@@ -11,14 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import { parseGenerationParams } from '@/utils/generationParamsUtils';
 import { getGameConfig } from '@/config/tcg-games';
-import type { TCGGame, CardGenerationParams } from '@/types';
+import type { TCGGame, CardGenerationParams, GeneratedCard } from '@/types';
 import Image from 'next/image';
 
 export default function EditGenerateCardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string; params?: any } | null>(null);
+  const [generatedCard, setGeneratedCard] = useState<(GeneratedCard & { params?: CardGenerationParams }) | null>(null);
   const [originalCard, setOriginalCard] = useState<{ id: string; name: string; imageUrl: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [initialValues, setInitialValues] = useState<Partial<CardGenerationParams> | undefined>(undefined);

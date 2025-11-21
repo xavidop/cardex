@@ -17,38 +17,20 @@ import { Loader2, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { downloadCardFromBase64 } from '@/utils/downloadUtils';
 import { useAuth } from '@/hooks/useAuth';
-import type { TCGGame, CardGenerationParams } from '@/types';
+import type { TCGGame, CardGenerationParams, GeneratedCard } from '@/types';
 import { TCG_GAMES, getGameConfig, getDefaultStats } from '@/config/tcg-games';
-
-const languages = [
-  { value: 'english', label: 'English' },
-  { value: 'japanese', label: 'Japanese' },
-  { value: 'chinese', label: 'Chinese' },
-  { value: 'korean', label: 'Korean' },
-  { value: 'spanish', label: 'Spanish' },
-  { value: 'french', label: 'French' },
-  { value: 'german', label: 'German' },
-  { value: 'italian', label: 'Italian' },
-] as const;
-
-const models = [
-  { value: 'imagen-4.0-ultra-generate-001', label: 'Imagen 4.0 Ultra' },
-  { value: 'imagen-4.0-generate-001', label: 'Imagen 4.0 Standard' },
-  { value: 'imagen-4.0-fast-generate-001', label: 'Imagen 4.0 Fast' },
-  { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (Nano Banana)' },
-  { value: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image Preview' },
-] as const;
+import { LANGUAGES, AI_MODELS, tcgGameSchema, languageSchema, aiModelSchema } from '@/constants';
 
 const cardGeneratorSchema = z.object({
-  game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']),
+  game: tcgGameSchema,
   characterName: z.string().min(1, 'Character name is required'),
   characterType: z.string().min(1, 'Type is required'),
   isSpecialArt: z.boolean(),
   isHolo: z.boolean(),
   backgroundDescription: z.string().min(10, 'Background description must be at least 10 characters'),
   characterDescription: z.string().min(10, 'Character description must be at least 10 characters'),
-  language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
-  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image', 'gemini-3-pro-image-preview']),
+  language: languageSchema,
+  model: aiModelSchema,
   // All possible game-specific stats (will be filtered based on selected game)
   hp: z.number().optional(),
   attackName1: z.string().optional(),
@@ -87,7 +69,7 @@ interface TCGCardGeneratorProps {
 export function TCGCardGenerator({ onCardGenerated, initialValues }: TCGCardGeneratorProps) {
   const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string } | null>(null);
+  const [generatedCard, setGeneratedCard] = useState<GeneratedCard | null>(null);
   const [error, setError] = useState<string>('');
   const { toast } = useToast();
 
@@ -342,7 +324,7 @@ export function TCGCardGenerator({ onCardGenerated, initialValues }: TCGCardGene
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
                 <SelectContent>
-                  {languages.map((lang) => (
+                  {LANGUAGES.map((lang) => (
                     <SelectItem key={lang.value} value={lang.value}>
                       {lang.label}
                     </SelectItem>
@@ -361,7 +343,7 @@ export function TCGCardGenerator({ onCardGenerated, initialValues }: TCGCardGene
                   <SelectValue placeholder="Select model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {models.map((model) => (
+                  {AI_MODELS.map((model) => (
                     <SelectItem key={model.value} value={model.value}>
                       {model.label}
                     </SelectItem>

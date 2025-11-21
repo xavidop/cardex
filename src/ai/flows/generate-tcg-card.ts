@@ -14,18 +14,19 @@ import { GoogleGenAI } from '@google/genai';
 import { getUserApiKeys } from '@/lib/firestore';
 import type { TCGGame } from '@/types';
 import { getGameConfig } from '@/config/tcg-games';
+import { tcgGameSchema, languageSchema, aiModelSchema } from '@/constants';
 
 const GenerateTCGCardInputSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']),
+  game: tcgGameSchema,
   characterName: z.string().min(1, "Character name is required"),
   characterType: z.string().min(1, "Character type is required"), 
   isSpecialArt: z.boolean(),
   isHolo: z.boolean(),
   backgroundDescription: z.string().min(1, "Background description is required"),
   characterDescription: z.string().min(1, "Character description is required"),
-  language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
-  model: z.enum(['imagen-4.0-ultra-generate-001', 'imagen-4.0-generate-001', 'imagen-4.0-fast-generate-001', 'gemini-2.5-flash-image', 'gemini-3-pro-image-preview']).default('imagen-4.0-ultra-generate-001'),
+  language: languageSchema,
+  model: aiModelSchema.default('imagen-4.0-ultra-generate-001'),
   
   // Pokemon-specific
   hp: z.number().optional(),

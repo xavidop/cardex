@@ -1,4 +1,4 @@
-import type { TCGGame } from '@/types';
+import type { TCGGame } from '@/constants';
 
 export interface TCGGameConfig {
   id: TCGGame;

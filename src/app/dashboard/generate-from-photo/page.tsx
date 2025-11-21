@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
 import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 import { getGameConfig } from '@/config/tcg-games';
-import type { TCGGame } from '@/types';
+import type { TCGGame, GeneratedCard, PhotoCardGenerationParams } from '@/types';
 
 export default function GenerateFromPhotoPage() {
   const { user } = useAuth();

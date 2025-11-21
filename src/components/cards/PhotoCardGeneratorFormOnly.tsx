@@ -19,26 +19,16 @@ import { downloadCardFromBase64 } from '@/utils/downloadUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useApiKeys } from '@/hooks/useApiKeys';
 import { TCG_GAMES, getGameConfig } from '@/config/tcg-games';
-import type { TCGGame, PhotoCardGenerationParams } from '@/types';
-
-const languages = [
-  { value: 'english', label: 'English' },
-  { value: 'japanese', label: 'Japanese' },
-  { value: 'chinese', label: 'Chinese' },
-  { value: 'korean', label: 'Korean' },
-  { value: 'spanish', label: 'Spanish' },
-  { value: 'french', label: 'French' },
-  { value: 'german', label: 'German' },
-  { value: 'italian', label: 'Italian' },
-] as const;
+import type { TCGGame, PhotoCardGenerationParams, GeneratedCard } from '@/types';
+import { LANGUAGES, tcgGameSchema, languageSchema } from '@/constants';
 
 const photoCardGeneratorSchema = z.object({
   photoDataUri: z.string().min(1, "Photo is required"),
-  game: z.enum(['pokemon', 'onepiece', 'lorcana', 'magic', 'dragonball']),
+  game: tcgGameSchema,
   characterName: z.string().min(1, 'Character name is required'),
   characterType: z.string().min(1, 'Character type is required'),
   styleDescription: z.string().min(10, 'Style description must be at least 10 characters'),
-  language: z.enum(['english', 'japanese', 'chinese', 'korean', 'spanish', 'french', 'german', 'italian']),
+  language: languageSchema,
   // All game-specific stats are optional and dynamic - use preprocess to handle empty strings and NaN
   hp: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(10).max(9999).optional()),
   attack: z.preprocess((val) => (val === '' || val === null || Number.isNaN(val)) ? undefined : val, z.number().min(0).max(9999).optional()),
@@ -71,7 +61,7 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
   const { user } = useAuth();
   const { hasOpenAIKey } = useApiKeys();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string } | null>(null);
+  const [generatedCard, setGeneratedCard] = useState<GeneratedCard | null>(null);
   const [error, setError] = useState<string>('');
   const [imagePreview, setImagePreview] = useState<string | null>(initialValues?.photoDataUri || null);
   const { toast } = useToast();
@@ -401,7 +391,7 @@ export function PhotoCardGeneratorFormOnly({ onCardGenerated, initialValues }: P
                   <SelectValue placeholder="Select language" />
                 </SelectTrigger>
                 <SelectContent>
-                  {languages.map((lang) => (
+                  {LANGUAGES.map((lang) => (
                     <SelectItem key={lang.value} value={lang.value}>
                       {lang.label}
                     </SelectItem>
