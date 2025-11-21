@@ -1,34 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { generateTCGCardFromPhoto } from '@/ai/flows/generate-tcg-card-from-photo';
+import { handleApiRequest } from '@/lib/api-handler';
 
+/**
+ * Required fields for photo-based card generation
+ */
+const REQUIRED_FIELDS = [
+  'userId',
+  'photoDataUri',
+  'characterName',
+  'characterType',
+  'styleDescription',
+  'game'
+] as const;
+
+/**
+ * POST /api/generate-card-from-photo
+ * Generates a TCG card from a photo using AI
+ */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    // Validate required fields - including userId
-    const requiredFields = ['userId', 'photoDataUri', 'characterName', 'characterType', 'styleDescription', 'game'];
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Call the AI flow
-    const result = await generateTCGCardFromPhoto(body);
-
-    if (result.error) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('API route error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  return handleApiRequest(request, REQUIRED_FIELDS, generateTCGCardFromPhoto);
 }

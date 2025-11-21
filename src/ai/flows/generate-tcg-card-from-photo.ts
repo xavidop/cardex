@@ -15,6 +15,13 @@ import { getUserApiKeys } from '@/lib/firestore';
 import { getGameConfig } from '@/config/tcg-games';
 import type { TCGGame } from '@/types';
 import { tcgGameSchema, languageSchema } from '@/constants';
+import {
+  generatePokemonPrompt,
+  generateOnePiecePrompt,
+  generateLorcanaPrompt,
+  generateMagicPrompt,
+  generateDragonBallPrompt,
+} from '@/ai/prompts/game-prompts';
 
 const GenerateFromPhotoInputSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
@@ -147,19 +154,59 @@ function generatePhotoBasedCardPrompt(params: GenerateFromPhotoInput): string {
   
   switch (game) {
     case 'pokemon':
-      gameSpecificPrompt = generatePokemonPhotoPrompt(params);
+      gameSpecificPrompt = generatePokemonPrompt({
+        characterName: params.characterName,
+        characterType: params.characterType,
+        hp: params.hp,
+        attackName1: params.attackName1,
+        attackDamage1: params.attackDamage1,
+        attackName2: params.attackName2,
+        attackDamage2: params.attackDamage2,
+        weakness: params.weakness,
+        resistance: params.resistance,
+        retreatCost: params.retreatCost,
+        language: params.language,
+      });
       break;
     case 'onepiece':
-      gameSpecificPrompt = generateOnePiecePhotoPrompt(params);
+      gameSpecificPrompt = generateOnePiecePrompt({
+        characterName: params.characterName,
+        characterType: params.characterType,
+        power: params.power,
+        cost: params.cost,
+        counter: params.counter,
+      });
       break;
     case 'lorcana':
-      gameSpecificPrompt = generateLorcanaPhotoPrompt(params);
+      gameSpecificPrompt = generateLorcanaPrompt({
+        characterName: params.characterName,
+        characterType: params.characterType,
+        inkCost: params.inkCost,
+        strength: params.strength,
+        willpower: params.willpower,
+        lore: params.lore,
+        inkable: params.inkable,
+      });
       break;
     case 'magic':
-      gameSpecificPrompt = generateMagicPhotoPrompt(params);
+      gameSpecificPrompt = generateMagicPrompt({
+        characterName: params.characterName,
+        characterType: params.characterType,
+        manaCost: params.manaCost,
+        cardType: params.cardType,
+        subType: params.subType,
+        powerToughness: params.powerToughness,
+      });
       break;
     case 'dragonball':
-      gameSpecificPrompt = generateDragonBallPhotoPrompt(params);
+      gameSpecificPrompt = generateDragonBallPrompt({
+        characterName: params.characterName,
+        characterType: params.characterType,
+        combatPower: params.combatPower,
+        comboCost: params.comboCost,
+        comboEnergy: params.comboEnergy,
+        era: params.era,
+      });
       break;
   }
 
@@ -174,44 +221,4 @@ ${gameSpecificPrompt}
 ${languageInstruction}
 
 The final output must look like an authentic ${gameName} trading card with all text clearly legible and properly formatted. Make sure the information is displayed clearly and the character illustration feels natural within the adapted photographic style.`;
-}
-
-function generatePokemonPhotoPrompt(params: GenerateFromPhotoInput): string {
-  const { characterName, characterType, hp = 130, attackName1 = "Quick Attack", attackDamage1 = 60, attackName2 = "Special Move", attackDamage2 = 90, weakness = "Fighting", resistance = "Psychic", retreatCost = 2, language = 'english' } = params;
-  
-  const languageNote = language !== 'english' ? `All attack names and descriptions should be written in ${language}.` : '';
-  
-  return `A regular classic Pokémon trading card (not full art), featuring the Pokémon "${characterName}". The card has a standard vertical layout with a detailed illustration in the main area. The Pokémon "${characterName}", a ${characterType} type, should be depicted as the main subject.
-
-The card layout includes: The top left corner displays "${characterName}" in a stylized font, with "HP ${hp}" next to it in red. Below the Pokémon's name, the ${characterType} type symbol is clearly visible. In the lower section, the card has two attacks listed. The first attack is ${attackName1}, deals ${attackDamage1} damage. The second attack is ${attackName2}, deals ${attackDamage2} damage.
-
-Below the attacks, the Weakness is ${weakness} (x2), Resistance is ${resistance} (-30), and Retreat Cost shows ${retreatCost} energy symbols. The bottom edge of the card features a thin line of text indicating the rarity and copyright information.
-
-${languageNote}
-
-The overall style should match official Pokémon TCG card design with proper fonts, layout, and professional quality artwork.`;
-}
-
-function generateOnePiecePhotoPrompt(params: GenerateFromPhotoInput): string {
-  const { characterName, characterType, power = 5000, cost = 4, counter = 1000 } = params;
-  
-  return `Card layout: One Piece Card Game style with "${characterName}" prominently displayed. ${characterType} color indicator. Cost: ${cost}, Power: ${power}, Counter: ${counter}. Include attribute icons and ability text box.`;
-}
-
-function generateLorcanaPhotoPrompt(params: GenerateFromPhotoInput): string {
-  const { characterName, characterType, inkCost = 3, strength = 2, willpower = 3, lore = 2, inkable = true } = params;
-  
-  return `Card layout: Disney Lorcana style with "${characterName}" as title. ${characterType} ink color. Ink cost: ${inkCost}, Strength: ${strength}, Willpower: ${willpower}, Lore: ${lore}. ${inkable ? 'Include inkwell symbol.' : 'No inkwell symbol.'}`;
-}
-
-function generateMagicPhotoPrompt(params: GenerateFromPhotoInput): string {
-  const { characterName, manaCost = '{2}{G}', cardType = 'Creature', subType = 'Warrior', powerToughness = '3/3' } = params;
-  
-  return `Card layout: Magic: The Gathering style. Card name: "${characterName}", Mana cost: ${manaCost} in top right. Type line: "${cardType} — ${subType}". ${cardType.toLowerCase().includes('creature') ? `Power/Toughness: ${powerToughness}` : ''}`;
-}
-
-function generateDragonBallPhotoPrompt(params: GenerateFromPhotoInput): string {
-  const { characterName, characterType, combatPower = 20000, comboCost = 1, comboEnergy = 5000, era = 'Universe Survival Saga' } = params;
-  
-  return `Card layout: Dragon Ball Super Card Game style. Character: "${characterName}", ${characterType} color. Combat Power: ${combatPower}, Combo Cost: ${comboCost}, Combo Energy: ${comboEnergy}, Era: ${era}.`;
 }

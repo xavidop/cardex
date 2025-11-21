@@ -14,33 +14,58 @@ import {
   orderBy,
   setDoc,
 } from 'firebase/firestore';
-import { db, auth, storage } from './firebase'; // Main Firebase config
+import { db, auth, storage } from './firebase';
 import type { PokemonCard, ScannedCardData, UserProfile, UserApiKeys } from '@/types';
 import { uploadCardImageToStorage, uploadVideoToStorage } from '@/utils/storageUtils';
 import { ref, deleteObject } from 'firebase/storage';
 import { filterUndefinedValues } from './utils';
 import { generateCardVideo } from '@/ai/flows/generate-card-video';
-
-const CARDS_COLLECTION = 'users'; // Top-level collection for users
+import { 
+  FIRESTORE_COLLECTIONS, 
+  FILE_SIZE_LIMITS, 
+  ERROR_MESSAGES, 
+  DEFAULT_TCG_GAME,
+  type VideoGenerationStatus 
+} from '@/constants';
 
 // Path: users/{userId}/pokemon_cards/{pokemonCardId}
 const getPokemonCardsCollectionRef = (userId: string) => {
-  return collection(db, CARDS_COLLECTION, userId, 'pokemon_cards');
+  return collection(db, FIRESTORE_COLLECTIONS.USERS, userId, FIRESTORE_COLLECTIONS.POKEMON_CARDS);
 };
 
-// Background function to generate and upload video for a card
-const generateVideoForCard = async (userId: string, cardId: string, card: PokemonCard) => {
+/**
+ * Validates that a video URL is valid for Firestore storage
+ * @param videoUrl - The video URL to validate
+ * @throws Error if URL is invalid
+ */
+const validateVideoUrl = (videoUrl: string): void => {
+  if (!videoUrl.startsWith('http')) {
+    throw new Error(ERROR_MESSAGES.VIDEO_INVALID_URL);
+  }
+  
+  if (videoUrl.length > FILE_SIZE_LIMITS.URL_MAX_LENGTH) {
+    throw new Error(ERROR_MESSAGES.VIDEO_INVALID_DATA);
+  }
+};
+
+/**
+ * Background function to generate and upload video for a card
+ * @param userId - The user ID who owns the card
+ * @param cardId - The card ID to generate video for
+ * @param card - The card data
+ */
+const generateVideoForCard = async (userId: string, cardId: string, card: PokemonCard): Promise<void> => {
   try {
     console.log(`Starting background video generation for card: ${card.name}`);
     
     // Update status to generating
     await updateCardInCollection(userId, cardId, { 
-      videoGenerationStatus: 'generating' 
+      videoGenerationStatus: 'generating' as VideoGenerationStatus
     });
 
     // Determine Pokemon type from generation params or default
-    const pokemonType = card.generationParams?.pokemonType || 
-                       card.photoGenerationParams?.pokemonType || 
+    const pokemonType = card.generationParams?.characterType || 
+                       card.photoGenerationParams?.characterType || 
                        'Normal';
 
     // Generate video using AI
@@ -51,57 +76,33 @@ const generateVideoForCard = async (userId: string, cardId: string, card: Pokemo
       userId: userId,
     });
 
-    console.log('Video generation result:', {
-      hasError: !!videoResult.error,
-      hasVideoBase64: !!videoResult.videoBase64,
-      videoBase64Type: typeof videoResult.videoBase64,
-      videoBase64Preview: videoResult.videoBase64?.substring(0, 50) + '...',
-    });
-
     if (videoResult.error || !videoResult.videoBase64) {
       console.error('Video generation failed:', videoResult.error);
       await updateCardInCollection(userId, cardId, { 
-        videoGenerationStatus: 'failed' 
+        videoGenerationStatus: 'failed' as VideoGenerationStatus
       });
       return;
     }
 
     // Ensure we have base64 data, not a URL
     if (videoResult.videoBase64.startsWith('http')) {
-      console.error('Video generation returned a URL instead of base64 data:', videoResult.videoBase64);
+      console.error('Video generation returned a URL instead of base64 data');
       await updateCardInCollection(userId, cardId, { 
-        videoGenerationStatus: 'failed' 
+        videoGenerationStatus: 'failed' as VideoGenerationStatus
       });
       return;
     }
 
     // Upload video to storage
-    console.log('Uploading video to Firebase Storage...');
     const videoUrl = await uploadVideoToStorage(videoResult.videoBase64, userId, card.name);
-    console.log('Video uploaded to Firebase Storage:', videoUrl);
+    
+    // Validate video URL before storing
+    validateVideoUrl(videoUrl);
 
-    // Validate that videoUrl is a proper Firebase Storage URL (production or emulator), not raw data
-    if (!videoUrl.startsWith('http')) {
-      console.error('Invalid video URL returned from storage upload:', videoUrl.substring(0, 100));
-      await updateCardInCollection(userId, cardId, { 
-        videoGenerationStatus: 'failed' 
-      });
-      return;
-    }
-
-    // Additional safety check - ensure we're not storing large data in Firestore
-    if (videoUrl.length > 2000) { // URLs should be much shorter than this
-      console.error('Video URL is suspiciously long, might be raw data:', videoUrl.length);
-      await updateCardInCollection(userId, cardId, { 
-        videoGenerationStatus: 'failed' 
-      });
-      return;
-    }
-
-    // Update card with video info (only storing the URL, not the video data)
+    // Update card with video info
     await updateCardInCollection(userId, cardId, {
-      videoUrl, // This should only be a Firebase Storage URL
-      videoGenerationStatus: 'completed',
+      videoUrl,
+      videoGenerationStatus: 'completed' as VideoGenerationStatus,
       videoPrompt: videoResult.prompt,
     });
 
@@ -109,72 +110,63 @@ const generateVideoForCard = async (userId: string, cardId: string, card: Pokemo
   } catch (error) {
     console.error('Error in background video generation:', error);
     await updateCardInCollection(userId, cardId, { 
-      videoGenerationStatus: 'failed' 
+      videoGenerationStatus: 'failed' as VideoGenerationStatus
     });
   }
 };
 
+/**
+ * Adds a new card to the user's collection
+ * @param userId - The user ID who owns the card
+ * @param cardData - The card data including imageDataUrl
+ * @returns Promise resolving to the new card ID
+ * @throws Error if userId is missing or card add fails
+ */
 export const addCardToCollection = async (
   userId: string,
   cardData: Omit<PokemonCard, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'imageUrl'> & { imageDataUrl: string }
 ): Promise<string> => {
   if (!userId) {
-    console.error("addCardToCollection: User ID is missing.");
-    throw new Error('User ID is required to add a card.');
+    throw new Error(ERROR_MESSAGES.USER_ID_REQUIRED);
   }
   
-  console.log("DEBUG: Attempting to add card with userId:", userId);
-  console.log("DEBUG: Current auth user:", auth.currentUser?.uid);
-  console.log("DEBUG: Auth user matches:", auth.currentUser?.uid === userId);
-  console.log("DEBUG: Card game:", cardData.game || 'pokemon'); // Default to pokemon for backward compatibility
-  
   try {
-    // First, upload the image to Firebase Storage
-    console.log("Uploading card image to Firebase Storage...");
+    // Upload the image to Firebase Storage
     const imageUrl = await uploadCardImageToStorage(cardData.imageDataUrl, userId, cardData.name);
     
     const collectionRef = getPokemonCardsCollectionRef(userId);
     const { imageDataUrl, ...cardDataWithoutImage } = cardData;
     const docPayload = {
       ...cardDataWithoutImage,
-      game: cardData.game || 'pokemon', // Default to pokemon for backward compatibility
-      imageUrl, // Store the Firebase Storage URL instead of base64 data
+      game: cardData.game || DEFAULT_TCG_GAME,
+      imageUrl,
       userId,
-      // Don't initialize video generation automatically - make it opt-in
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    console.log(
-      "Attempting to add card to Firestore. Path:",
-      collectionRef.path,
-      "Payload keys:",
-      Object.keys(docPayload).join(', '),
-      "Image URL:",
-      imageUrl,
-      "Game:",
-      docPayload.game
-    );
-
     const docRef = await addDoc(collectionRef, docPayload);
-    console.log("Card successfully added to Firestore with ID:", docRef.id);
-
-    // Video generation is now opt-in - users can trigger it manually from the UI
+    
+    // Video generation is opt-in - users can trigger it manually from the UI
     return docRef.id;
   } catch (error) {
-    console.error('Error adding card to Firestore (full error object):', error);
-    let detailedMessage = 'Failed to add card to collection.';
+    console.error('Error adding card to Firestore:', error);
     if (error instanceof Error) {
-      detailedMessage = error.message;
       const firebaseError = error as any;
       if (firebaseError.code) {
-        detailedMessage = `Error: ${firebaseError.code} - ${error.message}`;
+        throw new Error(`${firebaseError.code}: ${error.message}`);
       }
     }
-    throw new Error(detailedMessage);
+    throw new Error(ERROR_MESSAGES.CARD_ADD_FAILED);
   }
 };
 
+/**
+ * Gets all cards for a user, ordered by most recently updated
+ * @param userId - The user ID to fetch cards for
+ * @returns Promise resolving to array of cards
+ * @throws Error if fetch fails
+ */
 export const getUserCards = async (userId: string): Promise<PokemonCard[]> => {
   if (!userId) return [];
   try {
@@ -186,14 +178,21 @@ export const getUserCards = async (userId: string): Promise<PokemonCard[]> => {
     }));
   } catch (error) {
     console.error('Error fetching user cards: ', error);
-    throw new Error('Failed to fetch card collection.');
+    throw new Error(ERROR_MESSAGES.CARD_FETCH_FAILED);
   }
 };
 
+/**
+ * Gets a card by its ID
+ * @param userId - The user ID who owns the card
+ * @param cardId - The card ID to fetch
+ * @returns Promise resolving to the card or null if not found
+ * @throws Error if fetch fails
+ */
 export const getCardById = async (userId: string, cardId: string): Promise<PokemonCard | null> => {
   if (!userId || !cardId) return null;
   try {
-    const cardDocRef = doc(db, CARDS_COLLECTION, userId, 'pokemon_cards', cardId);
+    const cardDocRef = doc(db, FIRESTORE_COLLECTIONS.USERS, userId, FIRESTORE_COLLECTIONS.POKEMON_CARDS, cardId);
     const cardSnap = await getDoc(cardDocRef);
     if (cardSnap.exists()) {
       return { id: cardSnap.id, ...cardSnap.data() } as PokemonCard;
@@ -201,39 +200,45 @@ export const getCardById = async (userId: string, cardId: string): Promise<Pokem
     return null;
   } catch (error) {
     console.error('Error fetching card by ID: ', error);
-    throw new Error('Failed to fetch card details.');
+    throw new Error(ERROR_MESSAGES.CARD_FETCH_FAILED);
   }
 };
 
+/**
+ * Updates a card in the collection
+ * @param userId - The user ID who owns the card
+ * @param cardId - The card ID to update
+ * @param cardData - The partial card data to update
+ * @throws Error if update fails or validation fails
+ */
 export const updateCardInCollection = async (
   userId: string,
   cardId: string,
   cardData: Partial<Omit<PokemonCard, 'id' | 'userId' | 'createdAt' | 'imageUrl'>> & { imageDataUrl?: string }
 ): Promise<void> => {
-  if (!userId || !cardId) throw new Error('User ID and Card ID are required to update a card.');
+  if (!userId || !cardId) {
+    throw new Error(`${ERROR_MESSAGES.USER_ID_REQUIRED} and ${ERROR_MESSAGES.CARD_ID_REQUIRED}`);
+  }
+  
   try {
-    const cardDocRef = doc(db, CARDS_COLLECTION, userId, 'pokemon_cards', cardId);
+    const cardDocRef = doc(db, FIRESTORE_COLLECTIONS.USERS, userId, FIRESTORE_COLLECTIONS.POKEMON_CARDS, cardId);
     
     let updateData: any = { ...cardData };
     
-    // Safety check: ensure we're not trying to store large video data in Firestore
-    if (updateData.videoUrl && updateData.videoUrl.length > 2000) {
-      console.error('Attempted to store large video data in Firestore. This is not allowed.');
-      throw new Error('Invalid video data: videos must be stored in Firebase Storage, not Firestore');
-    }
-    
-    // Validate video URL format if present - allow both production and emulator URLs
-    if (updateData.videoUrl && !updateData.videoUrl.startsWith('http')) {
-      console.error('Invalid video URL format:', updateData.videoUrl.substring(0, 100));
-      throw new Error('Video URL must be a valid HTTP URL from Firebase Storage');
+    // Validate video URL if present
+    if (updateData.videoUrl) {
+      validateVideoUrl(updateData.videoUrl);
     }
     
     // If a new image is provided, upload it to storage first
     if (cardData.imageDataUrl) {
-      console.log("Uploading updated card image to Firebase Storage...");
-      const imageUrl = await uploadCardImageToStorage(cardData.imageDataUrl, userId, cardData.name || 'updated_card');
+      const imageUrl = await uploadCardImageToStorage(
+        cardData.imageDataUrl, 
+        userId, 
+        cardData.name || 'updated_card'
+      );
       updateData.imageUrl = imageUrl;
-      delete updateData.imageDataUrl; // Remove the base64 data from the update
+      delete updateData.imageDataUrl;
     }
     
     await updateDoc(cardDocRef, {
@@ -242,14 +247,23 @@ export const updateCardInCollection = async (
     });
   } catch (error) {
     console.error('Error updating card: ', error);
-    throw new Error('Failed to update card.');
+    throw new Error(ERROR_MESSAGES.CARD_UPDATE_FAILED);
   }
 };
 
+/**
+ * Deletes a card from the collection and its associated files from storage
+ * @param userId - The user ID who owns the card
+ * @param cardId - The card ID to delete
+ * @throws Error if delete fails
+ */
 export const deleteCardFromCollection = async (userId: string, cardId: string): Promise<void> => {
-  if (!userId || !cardId) throw new Error('User ID and Card ID are required to delete a card.');
+  if (!userId || !cardId) {
+    throw new Error(`${ERROR_MESSAGES.USER_ID_REQUIRED} and ${ERROR_MESSAGES.CARD_ID_REQUIRED}`);
+  }
+  
   try {
-    const cardDocRef = doc(db, CARDS_COLLECTION, userId, 'pokemon_cards', cardId);
+    const cardDocRef = doc(db, FIRESTORE_COLLECTIONS.USERS, userId, FIRESTORE_COLLECTIONS.POKEMON_CARDS, cardId);
     
     // Get the card data first to delete the associated image from storage
     const cardDoc = await getDoc(cardDocRef);
@@ -294,41 +308,52 @@ export const deleteCardFromCollection = async (userId: string, cardId: string): 
     await deleteDoc(cardDocRef);
   } catch (error) {
     console.error('Error deleting card: ', error);
-    throw new Error('Failed to delete card.');
+    throw new Error(ERROR_MESSAGES.CARD_DELETE_FAILED);
   }
 };
 
-// Manual function to generate video for an existing card
+/**
+ * Manually generates video for an existing card
+ * @param userId - The user ID who owns the card
+ * @param cardId - The card ID to generate video for
+ * @throws Error if card not found or generation fails
+ */
 export const generateVideoForExistingCard = async (userId: string, cardId: string): Promise<void> => {
-  if (!userId || !cardId) throw new Error('User ID and Card ID are required to generate video.');
+  if (!userId || !cardId) {
+    throw new Error(`${ERROR_MESSAGES.USER_ID_REQUIRED} and ${ERROR_MESSAGES.CARD_ID_REQUIRED}`);
+  }
   
   try {
-    // Get the card data
     const card = await getCardById(userId, cardId);
     if (!card) {
-      throw new Error('Card not found');
+      throw new Error(ERROR_MESSAGES.CARD_NOT_FOUND);
     }
     
-    // Trigger video generation
     await generateVideoForCard(userId, cardId, card);
   } catch (error) {
     console.error('Error generating video for existing card:', error);
-    throw new Error('Failed to generate video for card.');
+    throw new Error(ERROR_MESSAGES.VIDEO_GENERATION_FAILED);
   }
 };
 
+// ============================================================================
 // User Profile Management Functions
+// ============================================================================
 
 /**
  * Creates or updates a user profile in Firestore
+ * @param userId - The user ID
+ * @param profileData - Partial user profile data to create/update
+ * @throws Error if userId is missing or operation fails
  */
 export const createOrUpdateUserProfile = async (userId: string, profileData: Partial<UserProfile>): Promise<void> => {
-  if (!userId) throw new Error('User ID is required to create/update profile.');
+  if (!userId) {
+    throw new Error(ERROR_MESSAGES.USER_ID_REQUIRED);
+  }
   
   try {
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(db, FIRESTORE_COLLECTIONS.USERS, userId);
     
-    // Filter out undefined values to prevent Firestore errors
     const filteredProfileData = filterUndefinedValues(profileData);
     
     const updateData: any = {
@@ -346,18 +371,23 @@ export const createOrUpdateUserProfile = async (userId: string, profileData: Par
     await setDoc(userRef, updateData, { merge: true });
   } catch (error) {
     console.error('Error creating/updating user profile:', error);
-    throw new Error('Failed to create/update user profile.');
+    throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
   }
 };
 
 /**
- * Gets a user profile from Firestore
+ * Gets a user profile from Firestore, creates basic profile if doesn't exist
+ * @param userId - The user ID to fetch profile for
+ * @returns Promise resolving to user profile or null
+ * @throws Error if userId is missing or fetch fails
  */
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  if (!userId) throw new Error('User ID is required to get profile.');
+  if (!userId) {
+    throw new Error(ERROR_MESSAGES.USER_ID_REQUIRED);
+  }
   
   try {
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(db, FIRESTORE_COLLECTIONS.USERS, userId);
     const userSnap = await getDoc(userRef);
     
     if (userSnap.exists()) {
@@ -365,7 +395,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     }
     
     // Create a basic user profile if it doesn't exist
-    console.log(`User profile not found for ${userId}, creating basic profile...`);
     const basicProfile: Partial<UserProfile> = {
       email: '',
       displayName: 'Anonymous User',
@@ -373,7 +402,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     
     await createOrUpdateUserProfile(userId, basicProfile);
     
-    // Return the newly created profile
     const newUserSnap = await getDoc(userRef);
     if (newUserSnap.exists()) {
       return newUserSnap.data() as UserProfile;
@@ -382,39 +410,49 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     return null;
   } catch (error) {
     console.error('Error getting user profile:', error);
-    throw new Error('Failed to get user profile.');
+    throw new Error(ERROR_MESSAGES.USER_NOT_FOUND);
   }
 };
 
 /**
  * Updates user API keys
+ * @param userId - The user ID
+ * @param apiKeys - The API keys to update
+ * @throws Error if userId is missing or update fails
  */
 export const updateUserApiKeys = async (userId: string, apiKeys: UserApiKeys): Promise<void> => {
-  if (!userId) throw new Error('User ID is required to update API keys.');
+  if (!userId) {
+    throw new Error(ERROR_MESSAGES.USER_ID_REQUIRED);
+  }
   
   try {
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(db, FIRESTORE_COLLECTIONS.USERS, userId);
     await updateDoc(userRef, {
       apiKeys: apiKeys,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
     console.error('Error updating user API keys:', error);
-    throw new Error('Failed to update API keys.');
+    throw new Error(ERROR_MESSAGES.API_KEYS_UPDATE_FAILED);
   }
 };
 
 /**
- * Gets user API keys
+ * Gets user API keys from their profile
+ * @param userId - The user ID
+ * @returns Promise resolving to API keys or null
+ * @throws Error if userId is missing or fetch fails
  */
 export const getUserApiKeys = async (userId: string): Promise<UserApiKeys | null> => {
-  if (!userId) throw new Error('User ID is required to get API keys.');
+  if (!userId) {
+    throw new Error(ERROR_MESSAGES.USER_ID_REQUIRED);
+  }
   
   try {
     const profile = await getUserProfile(userId);
     return profile?.apiKeys || null;
   } catch (error) {
     console.error('Error getting user API keys:', error);
-    throw new Error('Failed to get API keys.');
+    throw new Error(ERROR_MESSAGES.API_KEYS_FETCH_FAILED);
   }
 };

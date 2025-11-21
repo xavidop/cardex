@@ -216,7 +216,7 @@ export default function CollectionPage() {
         <div className="text-center py-10 border-2 border-dashed border-border rounded-lg">
           <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-archive-restore mx-auto mb-4 text-muted-foreground"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-V8"/><path d="M9.5 12.5 12 15l2.5-2.5"/><path d="M12 15V9"/></svg>
           <h2 className="text-xl font-semibold text-muted-foreground">Your collection is empty.</h2>
-          <p className="text-muted-foreground mt-2">Start by scanning or generating your first Pokémon card!</p>
+          <p className="text-muted-foreground mt-2">Start by scanning or generating your first TCG card!</p>
           <div className="flex gap-2 justify-center mt-6">
             <Button asChild variant="outline">
               <Link href="/dashboard/generate">

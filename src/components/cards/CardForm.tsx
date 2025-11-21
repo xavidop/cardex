@@ -41,7 +41,7 @@ export default function CardForm({
   isSubmitting,
   submitButtonText = 'Save Card',
   formTitle = 'Card Details',
-  formDescription = 'Fill in the details of the Pokémon card.',
+  formDescription = 'Fill in the details of the TCG card.',
   onCancel,
 }: CardFormProps) {
   const {
@@ -77,11 +77,11 @@ export default function CardForm({
             <div className="mb-4 rounded-md overflow-hidden border border-border aspect-[63/88] max-w-xs mx-auto bg-muted">
               <Image
                 src={currentImageDataUrl}
-                alt={watch('name') || 'Pokémon Card'}
+                alt={watch('name') || 'TCG Card'}
                 width={300}
                 height={420}
                 className="object-contain w-full h-full"
-                data-ai-hint="pokemon card"
+                data-ai-hint="tcg card"
               />
             </div>
           )}

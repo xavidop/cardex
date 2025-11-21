@@ -226,7 +226,7 @@ export default function EditCardPage() {
         isSubmitting={isSubmitting}
         submitButtonText="Save Changes"
         formTitle="Update Card Information"
-        formDescription="Modify the details of your Pokémon card."
+        formDescription="Modify the details of your TCG card."
         onCancel={() => router.push('/dashboard/collection')}
       />
     </div>

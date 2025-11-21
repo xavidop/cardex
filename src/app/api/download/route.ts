@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ERROR_MESSAGES, CACHE_CONTROL } from '@/constants';
 
+/**
+ * Validates if a URL is from Firebase Storage
+ * @param url - URL to validate
+ * @returns true if URL is from Firebase Storage (production or emulator)
+ */
+function isValidFirebaseStorageUrl(url: string): boolean {
+  return url.includes('firebasestorage.googleapis.com') ||
+         url.includes('localhost:9199') ||
+         url.includes('127.0.0.1:9199');
+}
+
+/**
+ * GET /api/download
+ * Proxy endpoint to download files from Firebase Storage to avoid CORS issues
+ * Only allows Firebase Storage URLs for security
+ */
 export async function GET(request: NextRequest) {
   try {
     const url = request.nextUrl.searchParams.get('url');
@@ -11,11 +28,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validate that the URL is from Firebase Storage (production or emulator)
-    const isFirebaseStorage = url.includes('firebasestorage.googleapis.com');
-    const isFirebaseEmulator = url.includes('localhost:9199') || url.includes('127.0.0.1:9199');
-    
-    if (!isFirebaseStorage && !isFirebaseEmulator) {
+    // Validate URL is from Firebase Storage
+    if (!isValidFirebaseStorageUrl(url)) {
       return NextResponse.json(
         { error: 'Only Firebase Storage URLs are allowed' }, 
         { status: 403 }
@@ -33,7 +47,6 @@ export async function GET(request: NextRequest) {
       throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
     }
 
-    // Get the content type from the original response
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
     
     // Stream the response
@@ -41,7 +54,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': 'attachment',
-        'Cache-Control': 'public, max-age=31536000',
+        'Cache-Control': CACHE_CONTROL.ONE_YEAR,
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET',
         'Access-Control-Allow-Headers': 'Content-Type',
@@ -49,8 +62,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Download proxy error:', error);
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : ERROR_MESSAGES.IMAGE_DOWNLOAD_FAILED;
+    
     return NextResponse.json(
-      { error: 'Failed to download file' }, 
+      { error: errorMessage }, 
       { status: 500 }
     );
   }
