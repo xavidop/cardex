@@ -1,21 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { CardGenerator } from '@/components/cards/CardGenerator';
+import { TCGCardGenerator } from '@/components/cards/TCGCardGenerator';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { addCardToCollection } from '@/lib/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { compressBase64Image, getBase64Size, formatBytes } from '@/utils/imageUtils';
+import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
+import { getGameConfig } from '@/config/tcg-games';
+import type { TCGGame, GeneratedCard, CardGenerationParams } from '@/types';
 
 export default function GenerateCardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [generatedCard, setGeneratedCard] = useState<{ imageBase64: string; prompt: string } | null>(null);
+  const [generatedCard, setGeneratedCard] = useState<(GeneratedCard & { params?: CardGenerationParams }) | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleCardGenerated = (imageBase64: string, prompt: string) => {
-    setGeneratedCard({ imageBase64, prompt });
+  const handleCardGenerated = (imageBase64: string, prompt: string, params: any) => {
+    setGeneratedCard({ imageBase64, prompt, params });
   };
 
   const handleSaveToCollection = async () => {
@@ -24,20 +28,53 @@ export default function GenerateCardPage() {
     setIsSaving(true);
     try {
       // Convert base64 to data URL
-      const imageDataUrl = `data:image/jpeg;base64,${generatedCard.imageBase64}`;
+      let imageDataUrl = `data:image/jpeg;base64,${generatedCard.imageBase64}`;
+      
+      // Check image size and compress if needed
+      const originalSize = getBase64Size(generatedCard.imageBase64);
+      console.log(`Original image size: ${formatBytes(originalSize)}`);
+      
+      // Firestore has a 1MB limit for document fields, so compress if needed
+      if (originalSize > 800000) { // 800KB threshold to be safe
+        console.log('Image is too large, compressing...');
+        try {
+          // Try first level compression
+          let compressedBase64 = await compressBase64Image(generatedCard.imageBase64, 400, 560, 0.7);
+          let compressedSize = getBase64Size(compressedBase64);
+          console.log(`Compressed image size (first attempt): ${formatBytes(compressedSize)}`);
+          
+          // If still too large, compress more aggressively
+          if (compressedSize > 800000) {
+            console.log('Still too large, applying aggressive compression...');
+            compressedBase64 = await compressBase64Image(generatedCard.imageBase64, 300, 420, 0.5);
+            compressedSize = getBase64Size(compressedBase64);
+            console.log(`Final compressed image size: ${formatBytes(compressedSize)}`);
+          }
+          
+          imageDataUrl = `data:image/jpeg;base64,${compressedBase64}`;
+        } catch (compressionError) {
+          console.error('Error compressing image:', compressionError);
+          // Fall back to original image
+        }
+      }
+      
+      const game = generatedCard.params?.game || 'pokemon';
+      const gameName = getGameConfig(game as TCGGame).name;
       
       await addCardToCollection(user.uid, {
-        name: 'Generated Pokemon Card',
+        name: `Generated ${gameName} Card`,
         set: 'AI Generated',
         rarity: 'Special',
+        game: game,
         imageDataUrl: imageDataUrl,
         isGenerated: true,
         prompt: generatedCard.prompt,
+        generationParams: generatedCard.params,
       });
 
       toast({
         title: 'Card Saved',
-        description: 'Your generated Pokemon card has been added to your collection!',
+        description: `Your generated ${gameName} card has been added to your collection!`,
       });
 
       // Clear the generated card after saving
@@ -57,13 +94,21 @@ export default function GenerateCardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Pokemon Card Generator</h1>
+        <h1 className="text-3xl font-bold mb-2">TCG Card Generator</h1>
         <p className="text-muted-foreground">
-          Create your own custom Pokemon cards using AI-powered image generation
+          Create your own custom trading cards for Pokémon, One Piece, Lorcana, Magic, and Dragon Ball using AI
         </p>
       </div>
 
-      <CardGenerator onCardGenerated={handleCardGenerated} />
+      {/* API Keys Warning - only show Gemini key warning for this page */}
+      <div className="mb-6">
+        <ApiKeysWarning 
+          requiredKeys={['geminiApiKey']} 
+          showDismiss={false}
+        />
+      </div>
+
+      <TCGCardGenerator onCardGenerated={handleCardGenerated} />
 
       {generatedCard && (
         <Card className="mt-8">

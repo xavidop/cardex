@@ -11,8 +11,8 @@ import Navbar from '@/components/layout/Navbar';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'Cardex - Pokémon Card Scanner',
-  description: 'Scan, identify, and manage your Pokémon card collection with Cardex.',
+  title: 'Cardex - TCG Card Scanner',
+  description: 'Scan, identify, and manage your TCG card collection with Cardex.',
 };
 
 export default function RootLayout({

@@ -1,40 +1,42 @@
 {
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "apphosting": {
+    "backendId": "studio",
+    "rootDir": "/",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "functions"
+    ]
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099,
+      "host": "0.0.0.0"
+    },
     "firestore": {
-      "rules": "firestore.rules",
-      "indexes": "firestore.indexes.json"
+      "port": 8080,
+      "host": "0.0.0.0"
     },
-    "apphosting": {
-      "backendId": "studio",
-      "rootDir": "/",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "functions"
-      ]
+    "hub": {
+      "port": 4400,
+      "host": "0.0.0.0"
     },
-    "emulators": {
-      "auth": {
-        "port": 9099,
-        "host": "0.0.0.0"
-      },
-      "firestore": {
-        "port": 8080,
-        "host": "0.0.0.0"
-      },
-      "hub": {
-        "port": 4400,
-        "host": "0.0.0.0"
-      },
-      "ui": {
-        "enabled": true,
-        "host": "0.0.0.0"
-      },
-      "logging": {
-        "host": "0.0.0.0"
-      },
-      "singleProjectMode": true
-    }
+    "ui": {
+      "enabled": true,
+      "host": "0.0.0.0"
+    },
+    "logging": {
+      "host": "0.0.0.0"
+    },
+    "singleProjectMode": true
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
-  
+}

@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScanLine, Sparkles, BookOpen } from 'lucide-react';
+import { ScanLine, Sparkles, BookOpen, Camera } from 'lucide-react';
+import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -14,11 +15,16 @@ export default function DashboardPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold font-headline mb-2">Welcome to your Cardex Dashboard</h1>
         <p className="text-lg text-muted-foreground">
-          Manage your Pokémon card collection with ease.
+          Manage your TCG card collection with ease.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      {/* API Keys Warning */}
+      <div className="mb-8">
+        <ApiKeysWarning />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -26,7 +32,7 @@ export default function DashboardPage() {
               Scan Cards
             </CardTitle>
             <CardDescription>
-              Use your camera to scan and identify Pokemon cards
+              Use your camera to scan and identify TCG cards
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -45,7 +51,7 @@ export default function DashboardPage() {
               Generate Cards
             </CardTitle>
             <CardDescription>
-              Create custom Pokemon cards using AI image generation
+              Create custom TCG cards using AI image generation
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -60,11 +66,30 @@ export default function DashboardPage() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center">
+              <Camera className="mr-2 h-5 w-5" />
+              Photo Cards
+            </CardTitle>
+            <CardDescription>
+              Transform your photos into TCG cards using AI
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/dashboard/generate-from-photo">
+                Create Photo Card
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center">
               <BookOpen className="mr-2 h-5 w-5" />
               My Collection
             </CardTitle>
             <CardDescription>
-              View and manage your Pokemon card collection
+              View and manage your TCG card collection
             </CardDescription>
           </CardHeader>
           <CardContent>

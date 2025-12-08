@@ -7,7 +7,11 @@ import { getCardById, updateCardInCollection } from '@/lib/firestore';
 import type { PokemonCard } from '@/types';
 import CardForm, { type CardFormInputs } from '@/components/cards/CardForm';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, Download, FileDown } from 'lucide-react';
+import { downloadCardImage, downloadCardVideo } from '@/utils/downloadUtils';
+import { Button } from '@/components/ui/button';
+import ShareButton from '@/components/ui/share-button';
+import { serializeGenerationParams, serializePhotoGenerationParams } from '@/utils/generationParamsUtils';
 
 export default function EditCardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -39,6 +43,38 @@ export default function EditCardPage() {
         .then(fetchedCard => {
           if (fetchedCard) {
             setCard(fetchedCard);
+            
+            // Check if this is an AI-generated card and redirect to appropriate generator
+            if (fetchedCard.isGenerated) {
+              if (fetchedCard.isPhotoGenerated && fetchedCard.photoGenerationParams) {
+                // Redirect to photo generator with parameters
+                const params = serializePhotoGenerationParams(fetchedCard.photoGenerationParams);
+                // Add original card data
+                params.append('originalCardId', fetchedCard.id);
+                params.append('originalCardName', fetchedCard.name);
+                params.append('originalCardImageUrl', fetchedCard.imageUrl);
+                router.replace(`/dashboard/generate-from-photo/edit?${params.toString()}`);
+                return;
+              } else if (fetchedCard.generationParams) {
+                // Redirect to regular generator with parameters
+                const params = serializeGenerationParams(fetchedCard.generationParams);
+                // Add original card data
+                params.append('originalCardId', fetchedCard.id);
+                params.append('originalCardName', fetchedCard.name);
+                params.append('originalCardImageUrl', fetchedCard.imageUrl);
+                router.replace(`/dashboard/generate/edit?${params.toString()}`);
+                return;
+              } else {
+                // AI-generated card but no parameters stored - show a message
+                toast({ 
+                  title: "Unable to Edit", 
+                  description: "This AI-generated card was created before parameter storage was implemented. Please generate a new card.",
+                  variant: "destructive" 
+                });
+                router.replace('/dashboard/collection');
+                return;
+              }
+            }
           } else {
             setError('Card not found or you do not have permission to edit it.');
             toast({ title: "Error", description: "Card not found.", variant: "destructive" });
@@ -58,16 +94,13 @@ export default function EditCardPage() {
 
     setIsSubmitting(true);
     try {
-      const updatedData: Partial<PokemonCard> = {
+      const updatedData = {
         name: data.name,
         set: data.set,
         rarity: data.rarity,
-        // imageDataUrl is part of CardFormInputs but might not change if not re-uploaded
-        // For simplicity, we assume imageDataUrl is handled if it's part of the form
-        // and if image upload was part of the edit form (which it isn't currently for simplicity)
-        // For this schema, imageDataUrl is part of CardFormInputs, so it will be included.
-        // If image editing is not part of this form, ensure data.imageDataUrl is the original one.
-        imageDataUrl: data.imageDataUrl, 
+        // Only include imageDataUrl if it's different from the original imageUrl
+        // This allows the backend to determine if a new image upload is needed
+        ...(data.imageDataUrl !== card.imageUrl && { imageDataUrl: data.imageDataUrl })
       };
       await updateCardInCollection(user.uid, card.id, updatedData);
       toast({ title: 'Card Updated', description: `${data.name} has been updated.` });
@@ -79,6 +112,55 @@ export default function EditCardPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDownloadCard = async () => {
+    if (!card) return;
+    
+    try {
+      await downloadCardImage(card.imageUrl, card.name);
+      toast({
+        title: 'Download Started',
+        description: `${card.name} is being downloaded.`,
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download the card. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDownloadVideo = async () => {
+    if (!card?.videoUrl) return;
+    
+    try {
+      await downloadCardVideo(card.videoUrl, card.name);
+      toast({
+        title: 'Video Download Started',
+        description: `${card.name} video is being downloaded.`,
+      });
+    } catch (error) {
+      console.error('Video download error:', error);
+      toast({
+        title: 'Video Download Failed',
+        description: 'Failed to download the video. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Helper function to check if video is ready for playback
+  const isVideoReady = () => {
+    return card?.videoUrl && (
+      card.videoGenerationStatus === 'completed' || 
+      card.videoUrl.includes('firebasestorage.googleapis.com') || 
+      card.videoUrl.includes('firebaseapp.com') || 
+      card.videoUrl.includes('googleapis.com/storage') ||
+      card.videoUrl.includes('localhost:9199') // Support emulator URLs
+    );
   };
 
   if (loading) {
@@ -106,14 +188,45 @@ export default function EditCardPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-8 text-center font-headline">Edit Card: {card.name}</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-center font-headline">Edit Card: {card.name}</h1>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleDownloadCard}
+            disabled={!card.imageUrl}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download Card
+          </Button>
+          {isVideoReady() && (
+            <Button 
+              variant="outline"
+              onClick={handleDownloadVideo}
+              className="border-green-200 bg-green-50 hover:bg-green-100 text-green-700"
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Download Video
+            </Button>
+          )}
+          {card.isGenerated && (
+            <ShareButton 
+              cardName={card.name}
+              cardImageUrl={card.imageUrl}
+              variant="outline"
+              size="default"
+              showText={true}
+            />
+          )}
+        </div>
+      </div>
       <CardForm
         initialData={card}
         onSubmit={handleUpdateCard}
         isSubmitting={isSubmitting}
         submitButtonText="Save Changes"
         formTitle="Update Card Information"
-        formDescription="Modify the details of your Pokémon card."
+        formDescription="Modify the details of your TCG card."
         onCancel={() => router.push('/dashboard/collection')}
       />
     </div>

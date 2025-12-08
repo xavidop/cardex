@@ -2,6 +2,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
 import firebaseConfig from '@/config/firebase';
 
 // Define which keys from firebaseConfig are considered essential for initialization.
@@ -47,6 +48,7 @@ if (missingEnvVars.length > 0) {
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
+let storage: FirebaseStorage;
 
 // Track if emulators have been connected to avoid multiple connections
 let emulatorsConnected = false;
@@ -59,12 +61,14 @@ try {
   }
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app);
   
   // Connect to emulators in development - do this immediately after getting auth/db instances
-  if (process.env.NODE_ENV === 'development' && !emulatorsConnected && typeof window !== 'undefined') {
+  if (process.env.NODE_ENV === 'development' && !emulatorsConnected) {
     try {
       connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
       connectFirestoreEmulator(db, 'localhost', 8080);
+      connectStorageEmulator(storage, 'localhost', 9199);
       emulatorsConnected = true;
       console.log('Firebase emulators connected successfully');
     } catch (error) {
@@ -81,4 +85,4 @@ try {
   throw error; // Re-throw the original Firebase error
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };

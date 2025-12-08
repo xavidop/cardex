@@ -1,34 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { generatePokemonCard } from '@/ai/flows/generate-pokemon-card';
+import { NextRequest } from 'next/server';
+import { generateTCGCard } from '@/ai/flows/generate-tcg-card';
+import { handleApiRequest } from '@/lib/api-handler';
 
+/**
+ * Required fields for card generation
+ */
+const REQUIRED_FIELDS = [
+  'userId',
+  'game',
+  'characterName',
+  'characterType',
+  'backgroundDescription',
+  'characterDescription'
+] as const;
+
+/**
+ * POST /api/generate-card
+ * Generates a TCG card using AI based on provided parameters
+ */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    // Validate required fields
-    const requiredFields = ['pokemonName', 'pokemonType', 'backgroundDescription', 'pokemonDescription'];
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Call the AI flow
-    const result = await generatePokemonCard(body);
-
-    if (result.error) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('API route error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  return handleApiRequest(request, REQUIRED_FIELDS, generateTCGCard);
 }
+

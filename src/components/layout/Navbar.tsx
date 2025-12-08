@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn, LogOut, UserCircle, ScanLine, BookOpen, Sparkles } from 'lucide-react';
+import { LogIn, LogOut, UserCircle, ScanLine, BookOpen, Sparkles, Camera, Menu, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
@@ -17,6 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 export default function Navbar() {
   const { user, loading } = useAuth();
@@ -43,6 +50,31 @@ export default function Navbar() {
     return names[0].substring(0, 2);
   };
 
+  const NavigationItems = ({ className = "", mobile = false }: { className?: string; mobile?: boolean }) => (
+    <div className={`${mobile ? 'flex flex-col space-y-3' : 'flex items-center space-x-4'} ${className}`}>
+      <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>
+        <Link href="/dashboard/scan">
+          <ScanLine className="mr-2 h-4 w-4" /> Scan Card
+        </Link>
+      </Button>
+      <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>
+        <Link href="/dashboard/generate">
+          <Sparkles className="mr-2 h-4 w-4" /> Generate Card
+        </Link>
+      </Button>
+      <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>
+        <Link href="/dashboard/generate-from-photo">
+          <Camera className="mr-2 h-4 w-4" /> Photo Card
+        </Link>
+      </Button>
+      <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>
+        <Link href="/dashboard/collection">
+          <BookOpen className="mr-2 h-4 w-4" /> My Collection
+        </Link>
+      </Button>
+    </div>
+  );
+
   return (
     <nav className="bg-card border-b border-border shadow-sm">
       <div className="container mx-auto px-4">
@@ -54,25 +86,59 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             {!loading && user && (
               <>
-                <Button variant="ghost" asChild>
-                  <Link href="/dashboard/scan">
-                    <ScanLine className="mr-2 h-4 w-4" /> Scan Card
-                  </Link>
-                </Button>
-                <Button variant="ghost" asChild>
-                  <Link href="/dashboard/generate">
-                    <Sparkles className="mr-2 h-4 w-4" /> Generate Card
-                  </Link>
-                </Button>
-                <Button variant="ghost" asChild>
-                  <Link href="/dashboard/collection">
-                    <BookOpen className="mr-2 h-4 w-4" /> My Collection
-                  </Link>
-                </Button>
+                {/* Desktop Navigation - Hidden on mobile and tablet (lg:flex) */}
+                <NavigationItems className="hidden lg:flex" />
+                
+                {/* Mobile/Tablet Navigation - Hidden on desktop (lg:hidden) */}
+                <div className="lg:hidden">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right">
+                      <SheetHeader>
+                        <SheetTitle>Navigation</SheetTitle>
+                      </SheetHeader>
+                      <div className="pt-4">
+                        <NavigationItems mobile={true} />
+                      </div>
+                      <div className="border-t pt-4 mt-6">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
+                            <AvatarFallback>{getInitials(user.displayName || user.email)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-medium">
+                              {user.displayName || 'User'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
+                        <Button variant="ghost" onClick={handleSignOut} className="w-full justify-start">
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Log out
+                        </Button>
+                        <Button variant="ghost" asChild className="w-full justify-start">
+                          <Link href="/dashboard/settings">
+                            <Settings className="mr-2 h-4 w-4" />
+                            Settings
+                          </Link>
+                        </Button>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
               </>
             )}
-            {!loading && (
-              user ? (
+            
+            {/* User Avatar (Desktop only) - Hidden on mobile and tablet */}
+            {!loading && user && (
+              <div className="hidden lg:block">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -94,19 +160,28 @@ export default function Navbar() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/dashboard/settings">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <Button asChild>
-                  <Link href="/login">
-                    <LogIn className="mr-2 h-4 w-4" /> Login
-                  </Link>
-                </Button>
-              )
+              </div>
+            )}
+            
+            {/* Login Button */}
+            {!loading && !user && (
+              <Button asChild>
+                <Link href="/login">
+                  <LogIn className="mr-2 h-4 w-4" /> Login
+                </Link>
+              </Button>
             )}
           </div>
         </div>
