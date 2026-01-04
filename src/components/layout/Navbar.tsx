@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogIn, LogOut, UserCircle, ScanLine, BookOpen, Sparkles, Camera, Menu, Settings } from 'lucide-react';
+import { LogIn, LogOut, UserCircle, ScanLine, BookOpen, Sparkles, Camera, Menu, Settings, Award } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
@@ -55,6 +55,11 @@ export default function Navbar() {
       <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>
         <Link href="/dashboard/scan">
           <ScanLine className="mr-2 h-4 w-4" /> Scan Card
+        </Link>
+      </Button>
+      <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>
+        <Link href="/dashboard/grade">
+          <Award className="mr-2 h-4 w-4" /> Grade Card
         </Link>
       </Button>
       <Button variant="ghost" asChild className={mobile ? "justify-start" : ""}>

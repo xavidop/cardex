@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScanLine, Sparkles, BookOpen, Camera } from 'lucide-react';
+import { ScanLine, Sparkles, BookOpen, Camera, Award } from 'lucide-react';
 import ApiKeysWarning from '@/components/cards/ApiKeysWarning';
 
 export default function DashboardPage() {
@@ -24,7 +24,7 @@ export default function DashboardPage() {
         <ApiKeysWarning />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -39,6 +39,25 @@ export default function DashboardPage() {
             <Button asChild className="w-full">
               <Link href="/dashboard/scan">
                 Start Scanning
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Award className="mr-2 h-5 w-5" />
+              Grade Cards
+            </CardTitle>
+            <CardDescription>
+              Pre-grade cards before sending to PSA, BGS, or CGC
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link href="/dashboard/grade">
+                Grade Card
               </Link>
             </Button>
           </CardContent>

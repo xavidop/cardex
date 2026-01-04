@@ -9,7 +9,7 @@ export const ai = genkit({
   plugins: [
     googleAI({apiKey: defaultApiKey})
   ],
-  model: 'googleai/gemini-2.5-pro-preview-05-06',
+  model: 'googleai/gemini-3-pro-preview',
 });
 
 // Function to create genkit instance with user API key
@@ -23,7 +23,7 @@ export async function createUserAI(userId: string) {
         plugins: [
           googleAI({apiKey: userApiKey})
         ],
-        model: 'googleai/gemini-2.5-pro-preview-05-06',
+        model: 'googleai/gemini-3-pro-preview',
       });
     }
   } catch (error) {

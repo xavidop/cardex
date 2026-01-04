@@ -81,6 +81,47 @@ export interface CardGenerationParams {
   era?: string;
 }
 
+// Card Grading Types
+export interface CardGradingResult {
+  overallGrade: number; // 1-10 scale (PSA standard)
+  centering: {
+    score: number; // 1-10
+    frontCentering: string; // e.g., "55/45"
+    backCentering: string; // e.g., "60/40"
+    notes: string;
+  };
+  corners: {
+    score: number; // 1-10
+    condition: string; // e.g., "Sharp", "Slightly worn"
+    notes: string;
+  };
+  edges: {
+    score: number; // 1-10
+    condition: string; // e.g., "Clean", "Minor wear"
+    notes: string;
+  };
+  surface: {
+    score: number; // 1-10
+    condition: string; // e.g., "Near mint", "Scratches visible"
+    notes: string;
+  };
+  gradingScale: 'PSA' | 'BGS' | 'CGC';
+  gradeName: string; // e.g., "GEM MINT", "MINT", "NEAR MINT"
+  estimatedValue?: string; // Optional market value estimate
+  recommendations: string[]; // Suggestions for card protection/preservation
+  detailedAnalysis: string; // Overall assessment
+}
+
+export interface CardGradingParams {
+  frontPhotoDataUri: string;
+  backPhotoDataUri?: string; // Optional: back of the card
+  userId?: string;
+  cardName?: string; // Optional: helps with value estimation
+  cardSet?: string; // Optional: helps with value estimation
+  game?: TCGGame; // Optional: context for grading
+  gradingScale?: 'PSA' | 'BGS' | 'CGC'; // Default to PSA
+}
+
 export interface GeneratedCard {
   imageBase64: string;
   prompt: string;
